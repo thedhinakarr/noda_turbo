@@ -11,10 +11,21 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.4",
+    "@hookform/resolvers": "^5.1.1",
     "@repo/ui": "workspace:*",
+    "@tanstack/react-query": "^5.80.6",
+    "d3": "^7.9.0",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.513.0",
     "next": "^15.3.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "react-hook-form": "^7.57.0",
+    "react-leaflet": "^5.0.0",
+    "recharts": "^2.15.3",
+    "zod": "^3.25.56",
+    "zustand": "^5.0.5"
   },
   "devDependencies": {
     "@next/eslint-plugin-next": "^15.3.0",
@@ -22,6 +33,8 @@
     "@repo/tailwind-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4.1.5",
+    "@types/d3": "^7.4.3",
+    "@types/leaflet": "^1.9.18",
     "@types/node": "^22.15.3",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.1",
