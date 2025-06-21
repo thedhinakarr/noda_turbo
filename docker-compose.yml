@@ -1,37 +1,39 @@
 # noda_turbo/docker-compose.yml
 
+version: '3.8'
+
 services:
   # PostgreSQL Database Service
   db:
-    image: postgres:16-alpine # Using a lightweight PostgreSQL image
+    image: postgres:16-alpine
     container_name: noda_turbo_postgres
+    restart: always
     ports:
-      - "5432:5432" # Map container port 5432 to host port 5432
+      # The syntax is "HOST_PORT:CONTAINER_PORT"
+      - "${POSTGRES_PORT}:5432"
     environment:
-      # Database Credentials (MATCH THESE TO YOUR .env files LATER)
-      POSTGRES_DB: noda_turbo_db
-      POSTGRES_USER: noda_user
-      POSTGRES_PASSWORD: noda_password
+      # These variables are read from the .env file at the project root
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      # Persist data outside the container
+      # This named volume persists the database data across container restarts
       - db_data:/var/lib/postgresql/data
-      # Optional: Copy a SQL script into the container to run on first start
-      # This is useful for initial setup, but we'll run our migration manually for now.
-      # - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      # This check ensures the database is fully ready before other services start
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   # Redis Service (for GraphQL Subscriptions PubSub)
   redis:
-    image: redis:7-alpine # Using a lightweight Redis image
+    image: redis:7-alpine
     container_name: noda_turbo_redis
+    restart: always
     ports:
-      - "6379:6379" # Map container port 6379 to host port 6379
+      - "6379:6379"
     volumes:
-      # Persist Redis data
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -41,29 +43,28 @@ services:
 
   # Data Ingestion Service
   ingestor:
+    # 'build' tells docker-compose to build an image from a Dockerfile
     build:
-      context: . # <-- CHANGE THIS: Context is now the monorepo root
-      dockerfile: ./apps/data-ingestion-service/Dockerfile # <-- CHANGE THIS: Specify full path to Dockerfile
+      # The context is the monorepo root, so the Dockerfile can access all files
+      context: .
+      # We point it to the correct Dockerfile for this service
+      dockerfile: ./apps/data-ingestion-service/Dockerfile
     container_name: noda_turbo_ingestor
-    environment:
-      PG_HOST: db
-      PG_PORT: 5432
-      PG_DATABASE: noda_turbo_db
-      PG_USER: noda_user
-      PG_PASSWORD: noda_password
-      CSV_INCOMING_DIR: /app/apps/data-ingestion-service/data/incoming # <-- ADJUST PATH INSIDE CONTAINER
-      CSV_PROCESSED_DIR: /app/apps/data-ingestion-service/data/processed # <-- ADJUST PATH INSIDE CONTAINER
-      CSV_ERROR_DIR: /app/apps/data-ingestion-service/data/errors # <-- ADJUST PATH INSIDE CONTAINER
-    volumes:
-      # Mount the entire apps/data-ingestion-service directory into the container
-      - ./apps/data-ingestion-service:/app/apps/data-ingestion-service
-      # If you prefer to mount only the /data folder for simplicity, use this instead:
-      # - ./apps/data-ingestion-service/data:/app/apps/data-ingestion-service/data
+    # 'depends_on' ensures the database is healthy before this service starts
     depends_on:
       db:
         condition: service_healthy
     restart: on-failure
+    environment:
+      # Pass the database connection details to our Node.js application
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
+      NODE_ENV: development
+    volumes:
+      # This is the most critical part for functionality. It maps the local 'data'
+      # folder to the folder inside the container that the service is watching.
+      - ./apps/data-ingestion-service/data:/app/apps/data-ingestion-service/data
 
 volumes:
   db_data:
   redis_data:
+

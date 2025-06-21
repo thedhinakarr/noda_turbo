@@ -1,41 +1,43 @@
-// apps/data-ingestion-service/src/index.ts
-
-import dotenv from 'dotenv';
-import path from 'path';
+// =================================================================
+// FILE: apps/data-ingestion-service/src/index.ts
+// (This file is now updated with the migration logic)
+// =================================================================
 import { connectDb } from './db';
-import { startWatcher } from './watcher';
+import { watchIncomingDirectory } from './watcher';
+import pool from './db';
+import fs from 'fs/promises';
+import path from 'path';
 
-// Load environment variables from .env in the current app's root
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
-
-const main = async () => {
-  console.log('Starting Data Ingestion Service...');
-
-  // Connect to PostgreSQL
-  await connectDb();
-
-  // Get directory paths from environment variables
-  const incomingDir = process.env.CSV_INCOMING_DIR;
-  const processedDir = process.env.CSV_PROCESSED_DIR;
-  const errorDir = process.env.CSV_ERROR_DIR;
-
-  if (!incomingDir || !processedDir || !errorDir) {
-    console.error('Environment variables for CSV directories are not set. Please check .env file.');
+/**
+ * Runs the SQL migration file to ensure the database schema is up to date.
+ */
+const runMigration = async () => {
+  console.log('Checking database schema...');
+  const client = await pool.connect();
+  try {
+    const migrationFilePath = path.resolve(__dirname, 'migrations/001_create_dashboard_data_table.sql');
+    const sql = await fs.readFile(migrationFilePath, 'utf-8');
+    await client.query(sql);
+    console.log('Database schema is ready.');
+  } catch (error) {
+    console.error('Failed to run database migration:', error);
     process.exit(1);
+  } finally {
+    client.release();
   }
-
-  // Start the file watcher
-  await startWatcher({
-    incomingDir,
-    processedDir,
-    errorDir,
-  });
-
-  console.log('Data Ingestion Service is running.');
 };
 
-// Start the service
-main().catch(err => {
-  console.error('Unhandled error in Data Ingestion Service:', err);
-  process.exit(1);
-});
+/**
+ * Main application entrypoint.
+ */
+const main = async () => {
+  console.log('Starting Data Ingestion Service...');
+  // 1. Connect to the database
+  await connectDb();
+  // 2. Ensure the schema is created
+  await runMigration();
+  // 3. Start watching for files
+  watchIncomingDirectory();
+};
+
+main();
