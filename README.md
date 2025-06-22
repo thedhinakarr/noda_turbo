@@ -21,32 +21,9 @@ The project is structured to ensure clear separation of concerns, independent sc
 
 The project follows a microservices-like architecture within a monorepo setup:
 
-```
-+----------------+          +-------------------+          +-----------------+          +-------------------+
-|  CSV Files     |          | Data Ingestion    |          |                 |          |                   |
-| (local folder) +--------->| Service (Node.js) |          | PostgreSQL DB   |<-------->| GraphQL API       |
-+----------------+          +-------------------+          |                 |          | (Apollo Server)   |
-     (Watches)                    (ETL / Loads)            |   (Data Store)  |<---------+-------------------+
-                                         |                 |                 |           (Queries/Mutations)
-                                         |                 +-----------------+                  |
-                                         |                          ^                      (WebSockets)
-                                         |                          |                            |
-                                         +--------------------------+----------------------------+
-                                         (DB Triggers / pg_notify)  (LISTENS & PUBLISHES to Redis)
-                                                              
-                                                              (Real-time Events)
-                                                              +-----------------+
-                                                              |                 |
-                                                              |   Redis (PubSub)|
-                                                              |                 |
-                                                              +-----------------+
-                                                                      |
-                                                                      V
-                                                              +-------------------+
-                                                              | Next.js Frontend  |
-                                                              | (Dashboard App)   |
-                                                              +-------------------+
-```
+
+![Architecture Diagram](./architecture.png)
+
 
 ## Technologies Used
 
