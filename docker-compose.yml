@@ -63,7 +63,29 @@ services:
       # This is the most critical part for functionality. It maps the local 'data'
       # folder to the folder inside the container that the service is watching.
       - ./apps/data-ingestion-service/data:/app/apps/data-ingestion-service/data
-
+  
+  # --- NEW: GraphQL API Service ---
+  graphql-api:
+    build:
+      context: .
+      dockerfile: ./apps/graphql-api/Dockerfile
+    container_name: noda_turbo_graphql_api
+    restart: always
+    ports:
+      # Expose port 4000 on the host machine
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Provide connection details for the database and redis
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
+      REDIS_URL: "redis://redis:6379"
+      NODE_ENV: development
+      PORT: 4000
+      
 volumes:
   db_data:
   redis_data:
