@@ -4,3 +4,9 @@ packages:
 
 onlyBuiltDependencies:
   - '@apollo/protobufjs'
+
+ignoredBuiltDependencies:
+  - '@apollo/protobufjs'
+  - '@parcel/watcher'
+  - '@tailwindcss/oxide'
+  - sharp

@@ -1,0 +1,653 @@
+"use client";
+// Clean, deduped dashboard – v2
+import React, { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Legend,
+} from "recharts";
+
+// Dynamic Leaflet map – no SSR
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+const Map: React.ComponentType<{ points: EngineerRow[] }> = dynamic(() => import("./components/Map"), {
+  ssr: false,
+});
+
+/* -------------------------------------------------------------------------- */
+/* Constants                                                                  */
+/* -------------------------------------------------------------------------- */
+const ENERGY_PRICE = 0.12; // €/kWh
+const CO2_FACTOR = 0.19; // kg/kWh
+
+/* -------------------------------------------------------------------------- */
+/* Types                                                                      */
+/* -------------------------------------------------------------------------- */
+interface RawRow {
+  [key: string]: string;
+}
+
+export interface EngineerRow {
+  date: string;
+  building: string;
+  energy: number;
+  volume: number;
+  demand: number;
+  efficiency: number;
+  lat: number;
+  lng: number;
+}
+
+interface EconomistRow {
+  date: string;
+  building: string;
+  cost: number;
+  co2: number;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
+const num = (v?: string) => {
+  const n = parseFloat(v ?? "");
+  return Number.isFinite(n) ? n : 0;
+};
+
+const fmt = (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 1 });
+
+const effColor = (e: number) =>
+  e > 0.9 ? "text-green-600" : e > 0.7 ? "text-yellow-600" : "text-red-600";
+
+/* -------------------------------------------------------------------------- */
+/* Dashboard                                                                  */
+/* -------------------------------------------------------------------------- */
+export default function Dashboard() {
+  const [raw, setRaw] = useState<RawRow[]>([]);
+  const [tab, setTab] = useState<"engineer" | "economist">("engineer");
+  const [loading, setLoading] = useState(true);
+
+  /* ------------------------------ data fetch ------------------------------ */
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/retrospect");
+        const json: RawRow[] = await res.json();
+        setRaw(json);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  /* ----------------------------- data parsing ----------------------------- */
+  const engineerData: EngineerRow[] = useMemo(
+    () =>
+      raw.map((r) => ({
+        date: r["Time period"] ?? "",
+        building: r["Building (control)"] ?? "—",
+        energy: num(r["Energy (abs)"]),
+        volume: num(r["Volume (abs)"]),
+        demand: num(r["Demand (k)"]),
+        efficiency: num(r["Efficiency"]),
+        lat: num((r as any).lat),
+        lng: num((r as any).lng),
+      })),
+    [raw]
+  );
+
+  const economistData: EconomistRow[] = useMemo(
+    () =>
+      engineerData.map((e) => ({
+        date: e.date,
+        building: e.building,
+        cost: e.energy * ENERGY_PRICE,
+        co2: e.energy * CO2_FACTOR,
+      })),
+    [engineerData]
+  );
+
+  if (loading) return <div className="p-10 text-center">Loading…</div>;
+
+  /* -------------------------------- charts -------------------------------- */
+  const engineerChart = (
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart data={engineerData} margin={{ left: 16 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="date" />
+        <YAxis />
+        <Tooltip />
+        <Legend />
+        <Line type="monotone" dataKey="energy" stroke="#3b82f6" dot={false} name="Energy (kWh)" />
+        <Line type="monotone" dataKey="volume" stroke="#10b981" dot={false} name="Volume (m³)" />
+        <Line type="monotone" dataKey="demand" stroke="#f59e0b" dot={false} name="Demand (kW)" />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+
+  const economistChart = (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={top10(economistData)} margin={{ left: 16 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="building" />
+        <YAxis />
+        <Tooltip />
+        <Legend />
+        <Bar dataKey="cost" fill="#0ea5e9" name="Cost (€)" />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
+  /* -------------------------------- table --------------------------------- */
+  const tableRows = tab === "engineer" ? engineerData : economistData;
+
+  /* -------------------------------- render -------------------------------- */
+  return (
+    <div className="p-6 space-y-6">
+      {/* Tabs */}
+      <div className="flex gap-3">
+        {(["engineer", "economist"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-3 py-1 rounded-md border text-sm font-medium ${
+              tab === t ? "bg-blue-600 text-white" : "bg-white text-gray-700"
+            }`}
+          >
+            {t === "engineer" ? "Engineer" : "Economist"}
+          </button>
+        ))}
+      </div>
+
+      {/* Chart */}
+      {tab === "engineer" ? engineerChart : economistChart}
+
+      {/* Table */}
+      <div className="overflow-auto border rounded-md">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-2 text-left">Building</th>
+              {tab === "engineer" ? (
+                <>
+                  <th className="p-2 text-right">Energy</th>
+                  <th className="p-2 text-right">Volume</th>
+                  <th className="p-2 text-right">Demand</th>
+                  <th className="p-2 text-right">Eff.</th>
+                </>
+              ) : (
+                <>
+                  <th className="p-2 text-right">Cost (€)</th>
+                  <th className="p-2 text-right">CO₂ (kg)</th>
+                </>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {tableRows.slice(0, 50).map((r) => (
+              <tr key={`${r.building}-${r.date}`} className="odd:bg-gray-50">
+                <td className="p-2 whitespace-nowrap">{r.building}</td>
+                {tab === "engineer" ? (
+                  <EngineerCells row={r as EngineerRow} />
+                ) : (
+                  <EconomistCells row={r as EconomistRow} />
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Map */}
+      <div className="h-80 w-full">
+        <Map points={engineerData} />
+      </div>
+    </div>
+  );
+}
+
+/* --------------------------- small cell components -------------------------- */
+const EngineerCells = ({ row }: { row: EngineerRow }) => (
+  <>
+    <td className="p-2 text-right">{fmt(row.energy)}</td>
+    <td className="p-2 text-right">{fmt(row.volume)}</td>
+    <td className="p-2 text-right">{fmt(row.demand)}</td>
+    <td className={`p-2 text-right ${effColor(row.efficiency)}`}>{fmt(row.efficiency)}</td>
+  </>
+);
+
+const EconomistCells = ({ row }: { row: EconomistRow }) => (
+  <>
+    <td className="p-2 text-right">{fmt(row.cost)}</td>
+    <td className="p-2 text-right">{fmt(row.co2)}</td>
+  </>
+);
+
+/* -------------------------------- utilities -------------------------------- */
+function top10(arr: EconomistRow[]) {
+  return [...arr].sort((a, b) => b.cost - a.cost).slice(0, 10);
+}
+
+import dynamic from "next/dynamic";
+import React, { useEffect, useState, useMemo }
+
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  Legend,
+} from "recharts";
+
+// Leaflet map (client-side only)
+const Map = dynamic(() => import("./components/Map"), { ssr: false });
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Constants
+// ────────────────────────────────────────────────────────────────────────────────
+const ENERGY_PRICE = 0.12; // €/kWh
+const CO2_FACTOR = 0.19; // kg/kWh
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Types
+// ────────────────────────────────────────────────────────────────────────────────
+interface RawRow {
+  [key: string]: string;
+}
+
+interface EngineerRow {
+  date: string;
+  building: string;
+  energy: number;
+  volume: number;
+  demand: number;
+  efficiency: number;
+  lat: number;
+  lng: number;
+}
+
+interface EconomistRow {
+  date: string;
+  building: string;
+  cost: number;
+  co2: number;
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ────────────────────────────────────────────────────────────────────────────────
+const num = (v: string | undefined) => {
+  const n = parseFloat(v ?? "");
+  return Number.isFinite(n) ? n : 0;
+};
+
+const fmt = (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 1 });
+
+const effColor = (e: number) =>
+  e > 0.9 ? "text-green-600" : e > 0.7 ? "text-yellow-600" : "text-red-600";
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Component
+// ────────────────────────────────────────────────────────────────────────────────
+
+  const [raw, setRaw] = useState<RawRow[]>([]);
+  const [tab, setTab] = useState<"engineer" | "economist">("engineer");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/retrospect");
+        setRaw(await res.json());
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // Parse & memoise ─────────────────────────────────────────────────────────────
+  const engineerData: EngineerRow[] = useMemo(
+    () =>
+      raw.map((r) => ({
+        date: r["Time period"] ?? "",
+        building: r["Building (control)"] ?? "—",
+        energy: num(r["Energy (abs)"]),
+        volume: num(r["Volume (abs)"]),
+        demand: num(r["Demand (k)"]),
+        efficiency: num(r["Efficiency"]),
+        lat: num((r as any).lat),
+        lng: num((r as any).lng),
+      })),
+    [raw]
+  );
+
+  const economistData: EconomistRow[] = useMemo(
+    () =>
+      engineerData.map((e) => ({
+        date: e.date,
+        building: e.building,
+        cost: e.energy * ENERGY_PRICE,
+        co2: e.energy * CO2_FACTOR,
+      })),
+    [engineerData]
+  );
+
+  const tableData = tab === "engineer" ? engineerData : economistData;
+
+  if (loading) return <div className="p-10 text-center">Loading…</div>;
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Charts
+  // ─────────────────────────────────────────────────────────────────────────────
+  const timeSeries = (
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart data={engineerData} margin={{ left: 16 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="date" />
+        <YAxis />
+        <Tooltip />
+        <Legend />
+        <Line type="monotone" dataKey="energy" name="Energy (kWh)" stroke="#3b82f6" dot={false} />
+        <Line type="monotone" dataKey="volume" name="Volume (m³)" stroke="#10b981" dot={false} />
+        <Line type="monotone" dataKey="demand" name="Demand (kW)" stroke="#f59e0b" dot={false} />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+
+  const topCost = (
+    <ResponsiveContainer width="100%" height={300}>
+      <BarChart data={top10(economistData)} margin={{ left: 16 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="building" />
+        <YAxis />
+        <Tooltip />
+        <Legend />
+        <Bar dataKey="cost" name="Cost (€)" fill="#0ea5e9" />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Layout
+  // ─────────────────────────────────────────────────────────────────────────────
+  return (
+    <div className="p-6 space-y-6">
+      {/* Tabs */}
+      <div className="flex gap-3">
+        {(["engineer", "economist"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-3 py-1 rounded-md border text-sm font-medium ${
+              tab === t ? "bg-blue-600 text-white" : "bg-white text-gray-700"
+            }`}
+          >
+            {t === "engineer" ? "Engineer" : "Economist"}
+          </button>
+        ))}
+      </div>
+
+      {/* Chart */}
+      {tab === "engineer" ? timeSeries : topCost}
+
+      {/* Table */}
+      <div className="overflow-auto border rounded-md">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-2 text-left">Building</th>
+              {tab === "engineer" ? (
+                <>
+                  <th className="p-2 text-right">Energy</th>
+                  <th className="p-2 text-right">Volume</th>
+                  <th className="p-2 text-right">Demand</th>
+                  <th className="p-2 text-right">Eff.</th>
+                </>
+              ) : (
+                <>
+                  <th className="p-2 text-right">Cost (€)</th>
+                  <th className="p-2 text-right">CO₂ (kg)</th>
+                </>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {tableData.slice(0, 50).map((r) => (
+              <tr key={r.building + r.date} className="odd:bg-gray-50">
+                <td className="p-2 whitespace-nowrap">{r.building}</td>
+                {tab === "engineer" ? (
+                  <EngineerCells row={r as EngineerRow} />
+                ) : (
+                  <EconomistCells row={r as EconomistRow} />
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Map */}
+      <div className="h-80 w-full">
+        <Map points={engineerData} />
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Small util components
+// ────────────────────────────────────────────────────────────────────────────────
+const EngineerCells = ({ row }: { row: EngineerRow }) => (
+  <>
+    <td className="p-2 text-right">{fmt(row.energy)}</td>
+    <td className="p-2 text-right">{fmt(row.volume)}</td>
+    <td className="p-2 text-right">{fmt(row.demand)}</td>
+    <td className={`p-2 text-right ${effColor(row.efficiency)}`}>{fmt(row.efficiency)}</td>
+  </>
+);
+
+const EconomistCells = ({ row }: { row: EconomistRow }) => (
+  <>
+    <td className="p-2 text-right">{fmt(row.cost)}</td>
+    <td className="p-2 text-right">{fmt(row.co2)}</td>
+  </>
+);
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Utility
+// ────────────────────────────────────────────────────────────────────────────────
+function top10(arr: EconomistRow[]) {
+  return [...arr].sort((a, b) => b.cost - a.cost).slice(0, 10);
+}
+
+
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+} from "recharts";
+
+
+const Map = dynamic(() => import("./components/Map"), { ssr: false });
+
+
+const ENERGY_PRICE = 0.12; // €/kWh
+const CO2_FACTOR = 0.19; // kg/kWh
+
+// --- types ------------------------------------------------------------------
+interface Row {
+  [key: string]: string; // raw CSV fields
+}
+
+// --- helpers ----------------------------------------------------------------
+const number = (v: string | undefined) => parseFloat(v || "0") || 0;
+const format = (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 1 });
+
+const statusColor = (eff: number) =>
+  eff > 0.9 ? "text-green-600" : eff > 0.7 ? "text-yellow-600" : "text-red-600";
+
+// --- component --------------------------------------------------------------
+
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"engineer" | "economist">("engineer");
+
+  // fetch once
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await fetch("/api/retrospect");
+        setRows(await r.json());
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  if (loading) return <div className="p-10 text-center">Loading…</div>;
+
+  // transform rows -----------------------------------------------------------
+  const engineerData = rows.map((r) => ({
+    date: r["Time period"],
+    energy: number(r["Energy (abs)"]),
+    volume: number(r["Volume (abs)"]),
+    demand: number(r["Demand (k)"]),
+    efficiency: number(r["Efficiency"]),
+    building: r["Building (control)"],
+    lat: number(r.lat),
+    lng: number(r.lng),
+  }));
+
+  const economistData = engineerData.map((r) => ({
+    date: r.date,
+    building: r.building,
+    cost: r.energy * ENERGY_PRICE,
+    co2: r.energy * CO2_FACTOR,
+  }));
+
+  // simple charts ------------------------------------------------------------
+  const engineerChart = (
+    <ResponsiveContainer width="100%" height={250}>
+      <LineChart data={engineerData} margin={{ left: 20 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="date" />
+        <YAxis />
+        <Tooltip />
+        <Line type="monotone" dataKey="energy" stroke="#3b82f6" />
+        <Line type="monotone" dataKey="volume" stroke="#10b981" />
+        <Line type="monotone" dataKey="demand" stroke="#f59e0b" />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+
+  const economistChart = (
+    <ResponsiveContainer width="100%" height={250}>
+      <BarChart data={echemistTop10(economistData)} margin={{ left: 20 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="building" hide />
+        <YAxis />
+        <Tooltip />
+        <Bar dataKey="cost" fill="#0ea5e9" />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
+  return (
+    <div className="p-6 space-y-6">
+      {/* tabs */}
+      <div className="flex gap-4">
+        {[
+          { id: "engineer", label: "Engineer" },
+          { id: "economist", label: "Economist" },
+        ].map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id as any)}
+            className={`px-3 py-1 rounded-md border text-sm font-medium ${
+              tab === t.id ? "bg-blue-600 text-white" : "bg-white text-gray-700"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* chart */}
+      {tab === "engineer" ? engineerChart : economistChart}
+
+      {/* table */}
+      <div className="overflow-auto border rounded-md">
+        <table className="min-w-full text-sm">
+          <thead className="bg-gray-100 text-left">
+            <tr>
+              <th className="p-2">Building</th>
+              {tab === "engineer" ? (
+                <>
+                  <th className="p-2">Energy (kWh)</th>
+                  <th className="p-2">Volume (m³)</th>
+                  <th className="p-2">Demand (kW)</th>
+                  <th className="p-2">Eff.</th>
+                </>
+              ) : (
+                <>
+                  <th className="p-2">Cost (€)</th>
+                  <th className="p-2">CO₂ (kg)</th>
+                </>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {(tab === "engineer" ? engineerData : economistData).slice(0, 20).map((r) => (
+              <tr key={r.building + r.date} className="odd:bg-gray-50">
+                <td className="p-2 whitespace-nowrap">{r.building}</td>
+                {tab === "engineer" ? (
+                  <>
+                    <td className="p-2">{format(r.energy)}</td>
+                    <td className="p-2">{format(r.volume)}</td>
+                    <td className="p-2">{format(r.demand)}</td>
+                    <td className={`p-2 ${statusColor(r.efficiency)}`}>{format(r.efficiency)}</td>
+                  </>
+                ) : (
+                  <>
+                    <td className="p-2">{format(r.cost)}</td>
+                    <td className="p-2">{format(r.co2)}</td>
+                  </>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* map */}
+      <div className="h-72 w-full">
+        <Map points={engineerData} />
+      </div>
+    </div>
+  );
+}
+
+
+function echemistTop10(arr: { building: string; cost: number }[]) {
+  return [...arr]
+    .sort((a, b) => b.cost - a.cost)
+    .slice(0, 10);
+}
