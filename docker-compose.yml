@@ -1,32 +1,28 @@
-# noda_turbo/docker-compose.yml
-
+# =================================================================
+# FILE: docker-compose.yml
+# (This is the updated version of your existing file, now including the new llm-service)
+# =================================================================
 version: '3.8'
 
 services:
-  # PostgreSQL Database Service
   db:
     image: postgres:16-alpine
     container_name: noda_turbo_postgres
     restart: always
     ports:
-      # The syntax is "HOST_PORT:CONTAINER_PORT"
       - "${POSTGRES_PORT}:5432"
     environment:
-      # These variables are read from the .env file at the project root
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      # This named volume persists the database data across container restarts
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      # This check ensures the database is fully ready before other services start
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
-  # Redis Service (for GraphQL Subscriptions PubSub)
   redis:
     image: redis:7-alpine
     container_name: noda_turbo_redis
@@ -41,30 +37,21 @@ services:
       timeout: 3s
       retries: 5
 
-  # Data Ingestion Service
   ingestor:
-    # 'build' tells docker-compose to build an image from a Dockerfile
     build:
-      # The context is the monorepo root, so the Dockerfile can access all files
       context: .
-      # We point it to the correct Dockerfile for this service
       dockerfile: ./apps/data-ingestion-service/Dockerfile
     container_name: noda_turbo_ingestor
-    # 'depends_on' ensures the database is healthy before this service starts
     depends_on:
       db:
         condition: service_healthy
     restart: on-failure
     environment:
-      # Pass the database connection details to our Node.js application
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
       NODE_ENV: development
     volumes:
-      # This is the most critical part for functionality. It maps the local 'data'
-      # folder to the folder inside the container that the service is watching.
       - ./apps/data-ingestion-service/data:/app/apps/data-ingestion-service/data
-  
-  # --- NEW: GraphQL API Service ---
+
   graphql-api:
     build:
       context: .
@@ -72,7 +59,6 @@ services:
     container_name: noda_turbo_graphql_api
     restart: always
     ports:
-      # Expose port 4000 on the host machine
       - "4000:4000"
     depends_on:
       db:
@@ -80,13 +66,32 @@ services:
       redis:
         condition: service_healthy
     environment:
-      # Provide connection details for the database and redis
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
       REDIS_URL: "redis://redis:6379"
       NODE_ENV: development
       PORT: 4000
-      
+
+  # --- NEW: LLM Chat Service ---
+  llm-service:
+    build:
+      context: .
+      dockerfile: ./apps/llm-service/Dockerfile
+    container_name: noda_turbo_llm_service
+    restart: always
+    ports:
+      # Expose the service on a new port to avoid conflicts
+      - "5001:5001" 
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # This service will also need to connect to the database for context
+      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
+      PORT: 5001
+      # In a real app, you would add your LLM API Key here
+      # GEMINI_API_KEY: "your_api_key_here"
+
 volumes:
   db_data:
   redis_data:
-
+  llm_service_data:

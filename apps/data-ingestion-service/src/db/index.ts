@@ -1,11 +1,14 @@
 // =================================================================
 // FILE: apps/data-ingestion-service/src/db/index.ts
-// (No changes to this file)
+// (Updated with a more robust path to the .env file)
 // =================================================================
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config();
+// Load environment variables from the .env file in the project root.
+// This new path is more robust and works correctly with 'pnpm run dev'.
+dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

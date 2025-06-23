@@ -8,8 +8,8 @@ import express from 'express';
 import http from 'http';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { typeDefs } from './schema';
-import { resolvers } from './resolvers';
+import { typeDefs } from './graphql/schema';
+import { resolvers } from './graphql/resolvers';
 import { MyContext, createContext } from './context';
 
 dotenv.config();
