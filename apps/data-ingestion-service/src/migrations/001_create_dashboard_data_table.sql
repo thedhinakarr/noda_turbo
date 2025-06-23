@@ -1,7 +1,8 @@
 -- data-ingestion-service/src/migrations/001_create_dashboard_data_table.sql
+-- Final version: All metric/rank columns are NUMERIC for maximum flexibility.
 
 CREATE TABLE IF NOT EXISTS dashboard_data (
-    -- Surrogate Primary Key (Recommended for general use and ETL)
+    -- Surrogate Primary Key
     id BIGSERIAL PRIMARY KEY,
 
     -- Identifying / Categorical Columns
@@ -11,18 +12,18 @@ CREATE TABLE IF NOT EXISTS dashboard_data (
     geo_group TEXT NOT NULL,
     type_group TEXT NOT NULL,
     generic_group TEXT NOT NULL,
-    uuid TEXT NOT NULL, -- Note: This 'UUID' column is not guaranteed to be globally unique in CSV alone for all rows.
+    uuid TEXT NOT NULL,
 
     -- Geographical / Asset Information
     asset_latitude NUMERIC NOT NULL,
     asset_longitude NUMERIC NOT NULL,
 
-    -- Time-series Data Point (Timestamp with Time Zone confirmed)
+    -- Time-series Data Point
     time_period TIMESTAMP WITH TIME ZONE NOT NULL,
 
-    -- Core Dashboard Metrics (using NUMERIC for floats, INTEGER for integers as identified)
-    most_wanted INTEGER NOT NULL,
-    rank_overall INTEGER NOT NULL,
+    -- --- FIX: Changed all INTEGER metrics to NUMERIC ---
+    most_wanted NUMERIC NOT NULL,
+    rank_overall NUMERIC NOT NULL,
     rank_network NUMERIC NOT NULL,
     rank_customer NUMERIC NOT NULL,
     overflow_abs NUMERIC NOT NULL,
@@ -57,11 +58,9 @@ CREATE TABLE IF NOT EXISTS dashboard_data (
     supply_flex NUMERIC NOT NULL,
     fault_prim_loss NUMERIC NOT NULL,
     fault_smirch NUMERIC NOT NULL,
-    fault_heat_sys INTEGER NOT NULL,
+    fault_heat_sys NUMERIC NOT NULL,
     fault_valve NUMERIC NOT NULL,
     fault_transfer NUMERIC NOT NULL,
-
-    -- Data Quality Metrics (Missing)
     data_quality_missing_odt NUMERIC NOT NULL,
     data_quality_missing_supply NUMERIC NOT NULL,
     data_quality_missing_return NUMERIC NOT NULL,
@@ -71,45 +70,39 @@ CREATE TABLE IF NOT EXISTS dashboard_data (
     data_quality_missing_demand NUMERIC NOT NULL,
     data_quality_missing_return_sec NUMERIC NOT NULL,
     data_quality_missing_supply_sec NUMERIC NOT NULL,
-
-    -- Data Quality Metrics (Outlier)
-    data_quality_outlier_odt INTEGER NOT NULL,
-    data_quality_outlier_supply INTEGER NOT NULL,
-    data_quality_outlier_return INTEGER NOT NULL,
-    data_quality_outlier_flow INTEGER NOT NULL,
-    data_quality_outlier_energy INTEGER NOT NULL,
-    data_quality_outlier_volume INTEGER NOT NULL,
-    data_quality_outlier_demand INTEGER NOT NULL,
-    data_quality_outlier_return_sec INTEGER NOT NULL,
-    data_quality_outlier_supply_sec INTEGER NOT NULL,
-
-    -- Data Quality Metrics (Frozen)
-    data_quality_frozen_odt INTEGER NOT NULL,
+    data_quality_outlier_odt NUMERIC NOT NULL,
+    data_quality_outlier_supply NUMERIC NOT NULL,
+    data_quality_outlier_return NUMERIC NOT NULL,
+    data_quality_outlier_flow NUMERIC NOT NULL,
+    data_quality_outlier_energy NUMERIC NOT NULL,
+    data_quality_outlier_volume NUMERIC NOT NULL,
+    data_quality_outlier_demand NUMERIC NOT NULL,
+    data_quality_outlier_return_sec NUMERIC NOT NULL,
+    data_quality_outlier_supply_sec NUMERIC NOT NULL,
+    data_quality_frozen_odt NUMERIC NOT NULL,
     data_quality_frozen_supply NUMERIC NOT NULL,
     data_quality_frozen_return NUMERIC NOT NULL,
     data_quality_frozen_flow NUMERIC NOT NULL,
     data_quality_frozen_energy NUMERIC NOT NULL,
     data_quality_frozen_volume NUMERIC NOT NULL,
     data_quality_frozen_demand NUMERIC NOT NULL,
-    data_quality_frozen_return_sec INTEGER NOT NULL,
-    data_quality_frozen_supply_sec INTEGER NOT NULL,
-
-    -- Rank/Position Metrics
+    data_quality_frozen_return_sec NUMERIC NOT NULL,
+    data_quality_frozen_supply_sec NUMERIC NOT NULL,
     primloss_rank NUMERIC NOT NULL,
     smirch_rank NUMERIC NOT NULL,
-    heatsys_rank INTEGER NOT NULL,
-    valve_rank INTEGER NOT NULL,
-    transfer_rank INTEGER NOT NULL,
-    x_sum INTEGER NOT NULL,
-    y_sum INTEGER NOT NULL,
+    heatsys_rank NUMERIC NOT NULL,
+    valve_rank NUMERIC NOT NULL,
+    transfer_rank NUMERIC NOT NULL,
+    x_sum NUMERIC NOT NULL,
+    y_sum NUMERIC NOT NULL,
     vector_len NUMERIC NOT NULL,
     supply_pos NUMERIC NOT NULL,
-    dt_pos INTEGER NOT NULL,
-    rt_pos INTEGER NOT NULL,
-    ntu_pos INTEGER NOT NULL,
-    eff_pos INTEGER NOT NULL,
+    dt_pos NUMERIC NOT NULL,
+    rt_pos NUMERIC NOT NULL,
+    ntu_pos NUMERIC NOT NULL,
+    eff_pos NUMERIC NOT NULL,
 
-    -- Composite Unique Constraint (Recommended for logical uniqueness of a data point)
+    -- Composite Unique Constraint
     UNIQUE (uuid, time_period)
 );
 
@@ -118,7 +111,3 @@ CREATE INDEX IF NOT EXISTS idx_dashboard_data_time_period ON dashboard_data (tim
 
 -- Create a composite index on uuid and time_period for faster filtering and joins
 CREATE INDEX IF NOT EXISTS idx_dashboard_data_uuid_time_period ON dashboard_data (uuid, time_period);
-
--- Create a partial index for the pg_notify trigger (optional, but good for performance)
--- This index would be on columns typically part of the trigger's WHERE clause or payload generation
--- For simplicity, we'll rely on the unique constraint index for the trigger for now.

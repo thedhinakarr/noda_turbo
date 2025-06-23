@@ -67,4 +67,9 @@ export const typeDefs = gql`
     # Fetches a single record by its UUID.
     dashboardDataByUuid(uuid: String!): DashboardData
   }
+  
+  # --- NEW: For real-time updates ---
+  type Subscription {
+    systemUpdated: DashboardData
+  }
 `;

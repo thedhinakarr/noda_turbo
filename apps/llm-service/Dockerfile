@@ -1,24 +1,29 @@
 # =================================================================
 # FILE: apps/llm-service/Dockerfile
-# (Create this new file)
+# (Updated with a more robust installation process)
 # =================================================================
-# Use an official Python runtime as a parent image
 FROM python:3.9-slim
 
-# Set the working directory in the container
+# Set environment variables for clean Python execution in Docker
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Set work directory
 WORKDIR /usr/src/app
 
-# Copy the requirements file into the container
+# --- FIX: Ensure pip's binary directory is in the system's PATH ---
+# This guarantees that executables installed by pip are found.
+ENV PATH="/root/.local/bin:${PATH}"
+
+# Install dependencies into the user's site-packages directory
 COPY apps/llm-service/requirements.txt ./
+RUN pip install --no-cache-dir --user -r requirements.txt
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the rest of the application's code into the container
+# Copy the application code into the container
 COPY apps/llm-service/ .
 
 # Expose the port the app runs on
 EXPOSE 5001
 
-# Define the command to run the application
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5001"]
+# Run the application as a Python module, which is the most reliable method
+CMD ["python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5001"]
