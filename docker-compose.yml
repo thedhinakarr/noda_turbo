@@ -100,7 +100,10 @@ services:
     restart: always
     ports:
       # Map port 3002 on your machine to port 3000 inside the container
-      - "3002:3000"
+      - "3000:3000"
+    # Mount the source code as a volume for live reloading
+    volumes:
+      - ./apps/docs:/book
       
        
 volumes:

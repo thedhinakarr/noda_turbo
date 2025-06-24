@@ -1,10 +1,9 @@
 # =================================================================
 # FILE: apps/docs/book.toml
-# This is the final, correct, and minimal configuration.
-# It uses the default mdBook theme and will resolve the error.
+# This is the minimal configuration.
 # =================================================================
 [book]
-title = "Noda Turbo Project Documentation"
+title = "Noda Copilot Project Documentation"
 authors = ["The Noda Turbo Team"]
-description = "Comprehensive technical documentation for the Noda Turbo project."
+description = "Comprehensive technical documentation for the Noda Copilot project."
 language = "en"
