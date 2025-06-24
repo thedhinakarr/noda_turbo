@@ -1,6 +1,6 @@
 // =================================================================
 // FILE: apps/data-ingestion-service/src/index.ts
-// (This file is now updated with the migration logic)
+// (Updated with the new, robust migration runner)
 // =================================================================
 import { connectDb } from './db';
 import { watchIncomingDirectory } from './watcher';
@@ -9,18 +9,28 @@ import fs from 'fs/promises';
 import path from 'path';
 
 /**
- * Runs the SQL migration file to ensure the database schema is up to date.
+ * Reads all .sql files from the migrations directory and executes them
+ * in alphabetical order. This ensures the database schema is always up to date.
  */
-const runMigration = async () => {
+const runMigrations = async () => {
   console.log('Checking database schema...');
   const client = await pool.connect();
   try {
-    const migrationFilePath = path.resolve(__dirname, 'migrations/001_create_dashboard_data_table.sql');
-    const sql = await fs.readFile(migrationFilePath, 'utf-8');
-    await client.query(sql);
-    console.log('Database schema is ready.');
+    const migrationDir = path.resolve(__dirname, 'migrations');
+    const migrationFiles = (await fs.readdir(migrationDir))
+      .filter(file => file.endsWith('.sql'))
+      .sort(); // Sort files to ensure they run in order (e.g., 001, 002)
+
+    for (const file of migrationFiles) {
+      console.log(`Applying migration: ${file}`);
+      const filePath = path.join(migrationDir, file);
+      const sql = await fs.readFile(filePath, 'utf-8');
+      await client.query(sql);
+    }
+    
+    console.log('Database schema is up to date.');
   } catch (error) {
-    console.error('Failed to run database migration:', error);
+    console.error('Failed to run database migrations:', error);
     process.exit(1);
   } finally {
     client.release();
@@ -32,11 +42,8 @@ const runMigration = async () => {
  */
 const main = async () => {
   console.log('Starting Data Ingestion Service...');
-  // 1. Connect to the database
   await connectDb();
-  // 2. Ensure the schema is created
-  await runMigration();
-  // 3. Start watching for files
+  await runMigrations(); // This will now run all .sql files
   watchIncomingDirectory();
 };
 

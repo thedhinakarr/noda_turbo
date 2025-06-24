@@ -1,6 +1,5 @@
 // =================================================================
 // FILE: apps/graphql-api/src/index.ts
-// (Updated to use an executable schema for WebSockets)
 // =================================================================
 import express from 'express';
 import cors from 'cors';
@@ -19,26 +18,26 @@ import { MyContext, createContext } from './graphql/context';
 import authRoutes from './auth';
 import exportRoutes from './export';
 import { startPostgresListener } from './realtime/postgres-listener';
+import { connectRedis } from './realtime/redis-client';
 
 dotenv.config();
 
 const app = express();
 const httpServer = http.createServer(app);
 
-// --- Create an executable schema for both servers to use ---
 const schema = makeExecutableSchema({ typeDefs, resolvers });
 
 const startServer = async () => {
-  // --- WebSocket Server for Subscriptions ---
+  await connectRedis();
+
   const wsServer = new WebSocketServer({
     server: httpServer,
     path: '/api/graphql',
   });
   const serverCleanup = useServer({ schema }, wsServer);
 
-  // --- Apollo GraphQL Server ---
   const server = new ApolloServer<MyContext>({
-    schema, // Use the executable schema
+    schema,
     plugins: [
       ApolloServerPluginDrainHttpServer({ httpServer }),
       {
@@ -55,7 +54,6 @@ const startServer = async () => {
 
   await server.start();
 
-  // --- Express REST API Routes ---
   app.use(cors());
   app.use(express.json());
 
@@ -63,7 +61,6 @@ const startServer = async () => {
   app.use('/api/auth', authRoutes);
   app.use('/api/export', exportRoutes);
   
-  // --- GraphQL Endpoint ---
   app.use(
     '/api/graphql',
     expressMiddleware(server, { context: createContext })
@@ -72,13 +69,8 @@ const startServer = async () => {
   const port = process.env.PORT || 4000;
   await new Promise<void>((resolve) => httpServer.listen({ port }, resolve));
   
-  console.log(`GraphQL API ready at http://localhost:${port}/api/graphql`);
-  console.log(`Subscriptions ready at ws://localhost:${port}/api/graphql`);
-  console.log(`Auth routes ready at http://localhost:${port}/api/auth`);
-  console.log(`Export routes ready at http://localhost:${port}/api/export`);
-  console.log(`Health check ready at http://localhost:${port}/api/health`);
-
-  // --- Start the Real-time Data Listener ---
+  console.log(`🚀 GraphQL API ready at http://localhost:${port}/api/graphql`);
+  console.log(`🚀 Subscriptions ready at ws://localhost:${port}/api/graphql`);
   startPostgresListener();
 };
 

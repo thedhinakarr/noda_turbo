@@ -1,18 +1,14 @@
-//=================================================================
+// =================================================================
 // FILE: apps/graphql-api/src/realtime/pubsub.ts
-// (Updated with type casting to fix incompatibility)
+// (Updated with type casting to resolve the error)
 // =================================================================
 import { RedisPubSub } from 'graphql-redis-subscriptions';
-import { createClient } from 'redis';
+import { publisher, subscriber } from './redis-client';
 
-const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-
-const options = {
-  url: redisUrl,
-};
-
-// --- FIX: Cast the clients to 'any' to resolve type conflict ---
+// The RedisPubSub instance now uses the pre-connected clients.
+// We cast them to 'any' to resolve a known type incompatibility
+// between the latest redis client and the subscription library.
 export const pubsub = new RedisPubSub({
-  publisher: createClient(options) as any,
-  subscriber: createClient(options) as any,
+  publisher: publisher as any,
+  subscriber: subscriber as any,
 });

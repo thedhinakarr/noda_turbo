@@ -61,8 +61,6 @@ importers:
         specifier: ^5.5.3
         version: 5.8.2
 
-  apps/docs: {}
-
   apps/graphql-api:
     dependencies:
       '@apollo/server':
