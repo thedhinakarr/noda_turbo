@@ -1,8 +1,7 @@
 # =================================================================
 # FILE: docker-compose.yml
-# (Updated to remove the Loki logging driver configuration to fix the startup error)
+# v3: Fixes for Mimir command and Loki volume mount
 # =================================================================
-version: '3.8'
 
 services:
   # --- Application Services ---
@@ -98,21 +97,31 @@ services:
     image: grafana/loki:2.9.2
     container_name: noda_turbo_loki
     ports: ["3100:3100"]
-    command: -config.file=/etc/loki/local-config.yaml
+    # FIXED: Changed the path of the config file to a valid location
+    command: -config.file=/etc/loki.yaml
+    volumes:
+      # FIXED: Mount the config to the new path
+      - ./observability/loki-config.yaml:/etc/loki.yaml
+      - loki_data:/loki
     restart: always
 
   tempo:
     image: grafana/tempo:2.3.1
     container_name: noda_turbo_tempo
-    command: -search.enabled=true -storage.trace.backend=local -storage.trace.local.path=/tmp/tempo
+    command: -search.enabled=true -storage.trace.backend=local -storage.trace.local.path=/var/tempo/traces
     ports: ["3200:3200", "4317:4317", "4318:4318"]
+    volumes:
+      - tempo_data:/var/tempo/traces
     restart: always
 
   mimir:
     image: grafana/mimir:2.11.0
     container_name: noda_turbo_mimir
-    command: -target=all -auth.enabled=false
+    # FIXED: Removed the invalid -auth.enabled=false flag
+    command: -target=all
     ports: ["9009:9009"]
+    volumes:
+      - mimir_data:/data
     restart: always
 
   otel-collector:
@@ -125,7 +134,11 @@ services:
     depends_on: [tempo, mimir]
     restart: always
 
+# Named volumes for persistent data storage
 volumes:
   db_data:
   redis_data:
   grafana_data:
+  loki_data:
+  tempo_data:
+  mimir_data:
