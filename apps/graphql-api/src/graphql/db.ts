@@ -1,25 +1,14 @@
 // =================================================================
-// FILE: apps/graphql-api/src/db.ts
-// (Create new file)
+// FILE: apps/graphql-api/src/graphql/db.ts
 // =================================================================
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
-// Create a new PostgreSQL connection pool.
-// It automatically uses the DATABASE_URL from the environment.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-});
-
-pool.on('connect', () => {
-  console.log('Database pool connected');
-});
-
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle database client', err);
-  process.exit(-1);
 });
 
 export default pool;

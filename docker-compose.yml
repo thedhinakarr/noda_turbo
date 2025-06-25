@@ -1,22 +1,21 @@
 # =================================================================
 # FILE: docker-compose.yml
-# (This is the updated version of your existing file, now including the new llm-service)
+# (Updated to remove the Loki logging driver configuration to fix the startup error)
 # =================================================================
 version: '3.8'
 
 services:
+  # --- Application Services ---
   db:
     image: postgres:16-alpine
     container_name: noda_turbo_postgres
     restart: always
-    ports:
-      - "${POSTGRES_PORT}:5432"
+    ports: ["${POSTGRES_PORT}:5432"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - db_data:/var/lib/postgresql/data
+    volumes: ["db_data:/var/lib/postgresql/data"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -27,10 +26,8 @@ services:
     image: redis:7-alpine
     container_name: noda_turbo_redis
     restart: always
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
+    ports: ["6379:6379"]
+    volumes: ["redis_data:/data"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -48,9 +45,7 @@ services:
     restart: on-failure
     environment:
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
-      NODE_ENV: development
-    volumes:
-      - ./apps/data-ingestion-service/data:/app/apps/data-ingestion-service/data
+    volumes: ["./apps/data-ingestion-service/data:/app/apps/data-ingestion-service/data"]
 
   graphql-api:
     build:
@@ -58,55 +53,79 @@ services:
       dockerfile: ./apps/graphql-api/Dockerfile
     container_name: noda_turbo_graphql_api
     restart: always
-    ports:
-      - "4000:4000"
+    ports: ["4000:4000"]
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
     environment:
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
       REDIS_URL: "redis://redis:6379"
-      NODE_ENV: development
       PORT: 4000
 
-  # --- NEW: LLM Chat Service ---
   llm-service:
     build:
       context: .
       dockerfile: ./apps/llm-service/Dockerfile
     container_name: noda_turbo_llm_service
     restart: always
-    ports:
-      # Expose the service on a new port to avoid conflicts
-      - "5001:5001" 
+    ports: ["5001:5001"]
     depends_on:
-      db:
-        condition: service_healthy
+      db: { condition: service_healthy }
     environment:
-      # This service will also need to connect to the database for context
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
       PORT: 5001
-      # In a real app, you would add your LLM API Key here
-      # GEMINI_API_KEY: "your_api_key_here"
 
-  # --- Documentation Site (Powered by mdBook) ---
   docs:
     build:
       context: .
       dockerfile: ./apps/docs/Dockerfile
     container_name: noda_turbo_docs
     restart: always
-    ports:
-      # Map port 3002 on your machine to port 3000 inside the container
-      - "3000:3000"
-    # Mount the source code as a volume for live reloading
+    ports: ["3002:3000"]
+    volumes: ["./apps/docs:/book"]
+
+  # --- Observability Stack (LGTM) ---
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: noda_turbo_grafana
+    ports: ["3000:3000"]
     volumes:
-      - ./apps/docs:/book
-      
-       
+      - ./observability/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yaml
+      - grafana_data:/var/lib/grafana
+    restart: always
+
+  loki:
+    image: grafana/loki:2.9.2
+    container_name: noda_turbo_loki
+    ports: ["3100:3100"]
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: always
+
+  tempo:
+    image: grafana/tempo:2.3.1
+    container_name: noda_turbo_tempo
+    command: -search.enabled=true -storage.trace.backend=local -storage.trace.local.path=/tmp/tempo
+    ports: ["3200:3200", "4317:4317", "4318:4318"]
+    restart: always
+
+  mimir:
+    image: grafana/mimir:2.11.0
+    container_name: noda_turbo_mimir
+    command: -target=all -auth.enabled=false
+    ports: ["9009:9009"]
+    restart: always
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.92.0
+    container_name: noda_turbo_otel_collector
+    command: --config=/etc/otel-collector-config.yaml
+    volumes:
+      - ./observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports: ["1888:1888", "8888:8888", "8889:8889", "13133:13133"]
+    depends_on: [tempo, mimir]
+    restart: always
+
 volumes:
   db_data:
   redis_data:
-  llm_service_data:
+  grafana_data:

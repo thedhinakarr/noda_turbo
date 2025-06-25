@@ -1,16 +1,12 @@
-// =================================================================
-// FILE: apps/graphql-api/src/auth/index.ts
-// (Updated with real JWT and password hashing logic)
-// =================================================================
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import pool from '../graphql/db'; // Reuse the database pool
+import pool from '../graphql/db';
 
 const router: Router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'your-default-secret-key-for-dev';
+const SALT_ROUNDS = 10;
 
-// --- User Registration ---
 router.post('/register', async (req: Request, res: Response) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -18,25 +14,28 @@ router.post('/register', async (req: Request, res: Response) => {
   }
   
   try {
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (existingUser.rows.length > 0) {
+      return res.status(409).json({ error: 'User with this email already exists.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
     
-    // In a real app, you would save the user to the database:
-    // const newUser = await pool.query(
-    //   'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email',
-    //   [email, hashedPassword]
-    // );
+    const newUserResult = await pool.query(
+      'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email, role, created_at',
+      [email, hashedPassword]
+    );
     
-    console.log(`User registered: ${email}, Hashed Password: ${hashedPassword}`);
-    res.status(201).json({ message: 'User registered successfully.' });
+    const newUser = newUserResult.rows[0];
+    console.log(`User registered successfully: ${newUser.email}`);
+    res.status(201).json({ id: newUser.id, email: newUser.email, role: newUser.role, createdAt: newUser.created_at });
     
   } catch (error) {
     console.error("Registration error:", error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error during registration.' });
   }
 });
 
-// --- User Login ---
 router.post('/login', async (req: Request, res: Response) => {
   const { email, password } = req.body;
   if (!email || !password) {
@@ -44,31 +43,31 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 
   try {
-    // In a real app, you'd fetch the user from the DB
-    // const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-    // const user = userResult.rows[0];
+    const userResult = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = userResult.rows[0];
     
-    // For now, we'll use a dummy user for testing
-    const dummyUser = { email, passwordHash: await bcrypt.hash('password123', 10), id: 'user-123', role: 'admin' };
-    
-    if (!dummyUser) {
+    if (!user) {
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
 
-    const passwordIsValid = await bcrypt.compare(password, dummyUser.passwordHash);
+    const passwordIsValid = await bcrypt.compare(password, user.password_hash);
     
     if (!passwordIsValid) {
       return res.status(401).json({ error: 'Invalid credentials.' });
     }
     
-    // Generate JWT
-    const token = jwt.sign({ userId: dummyUser.id, role: dummyUser.role }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
     
+    console.log(`User logged in successfully: ${user.email}`);
     res.json({ token });
 
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error during login.' });
   }
 });
 

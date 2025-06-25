@@ -24,7 +24,6 @@ dotenv.config();
 
 const app = express();
 const httpServer = http.createServer(app);
-
 const schema = makeExecutableSchema({ typeDefs, resolvers });
 
 const startServer = async () => {
@@ -69,8 +68,7 @@ const startServer = async () => {
   const port = process.env.PORT || 4000;
   await new Promise<void>((resolve) => httpServer.listen({ port }, resolve));
   
-  console.log(`🚀 GraphQL API ready at http://localhost:${port}/api/graphql`);
-  console.log(`🚀 Subscriptions ready at ws://localhost:${port}/api/graphql`);
+  console.log(`🚀 GraphQL & Subscriptions ready at http://localhost:${port}/api/graphql`);
   startPostgresListener();
 };
 
