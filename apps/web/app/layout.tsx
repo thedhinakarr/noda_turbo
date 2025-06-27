@@ -1,36 +1,23 @@
-// =================================================================
-// FILE: apps/web/app/layout.tsx
-// (Updated with the corrected <link> tag)
-// =================================================================
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
-import { ApolloWrapper } from "@/lib/apollo-wrapper";
+// apps/web/app/layout.tsx
+import './globals.css';
+import { ApolloClientProvider } from './ApolloProviderWrapper';
 
-const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: "Noda Turbo Dashboard",
-  description: "Real-time data dashboard",
+export const metadata = {
+  title: 'NODA CoPilot Dashboard',
+  description: 'Monitoring and Optimization for Thermal Systems',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
-      <head>
-        <link
-          rel="stylesheet"
-          href="[https://unpkg.com/leaflet@1.7.1/dist/leaflet.css](https://unpkg.com/leaflet@1.7.1/dist/leaflet.css)"
-          xintegrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
-          crossOrigin=""
-        />
-      </head>
-      <body className={inter.className}>
-        <ApolloWrapper>{children}</ApolloWrapper>
+      <body>
+        <ApolloClientProvider>
+          {children}
+        </ApolloClientProvider>
       </body>
     </html>
   );

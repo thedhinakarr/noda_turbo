@@ -1,5 +1,10 @@
+# =================================================================
+# FILE: docker-compose.frontend.yml
+# A focused configuration for running only the frontend and its direct API dependencies.
+# =================================================================
+
 services:
-  # --- Application Services ---
+  # --- Backend Dependencies ---
   db:
     image: postgres:16-alpine
     container_name: noda_turbo_postgres
@@ -28,19 +33,7 @@ services:
       timeout: 3s
       retries: 5
 
-  ingestor:
-    build:
-      context: .
-      dockerfile: ./apps/data-ingestion-service/Dockerfile
-    container_name: noda_turbo_ingestor
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: on-failure
-    environment:
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
-    volumes: ["./apps/data-ingestion-service/data:/app/apps/data-ingestion-service/data"]
-
+  # --- API Service ---
   graphql-api:
     build:
       context: .
@@ -52,33 +45,25 @@ services:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
     environment:
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
+      DATABASE_URL: ${DATABASE_URL_DOCKER}
       REDIS_URL: "redis://redis:6379"
+      JWT_SECRET: ${JWT_SECRET}
       PORT: 4000
 
-  llm-service:
+  # --- Frontend Application ---
+  web:
     build:
       context: .
-      dockerfile: ./apps/llm-service/Dockerfile
-    container_name: noda_turbo_llm_service
+      dockerfile: ./apps/web/Dockerfile
+    container_name: noda_turbo_web
     restart: always
-    ports: ["5001:5001"]
+    ports: ["3001:3000"] # Exposed on 3001
     depends_on:
-      db: { condition: service_healthy }
+      - graphql-api
     environment:
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
-      PORT: 5001
+      NEXT_PUBLIC_API_URL: http://graphql-api:4000
 
-  docs:
-    build:
-      context: .
-      dockerfile: ./apps/docs/Dockerfile
-    container_name: noda_turbo_docs
-    restart: always
-    ports: ["3002:3000"]
-    volumes: ["./apps/docs:/book"]
-
-# Named volumes for persistent data storage
+# Named volumes for persistent data
 volumes:
   db_data:
   redis_data:
