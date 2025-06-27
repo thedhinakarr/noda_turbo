@@ -1,128 +1,121 @@
-// apps/web/components/dashboard/Sidebar.tsx
 "use client"; // This is a client component
 
-import React, { useState } from 'react';
-import { MapPin, Search, Filter, List, Globe, CheckCircle, Clock, AlertTriangle, MoreHorizontal } from 'lucide-react';
+import React from 'react';
+import { Search, Filter, ChevronsUpDown, Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Popover, PopoverTrigger, PopoverContent } from '@headlessui/react'; // Assuming headlessui is installed
 
 // Define the shape of a thermal system item
 interface ThermalSystem {
-  id: string; // Assuming ID is string from GraphQL
+  id: string;
   name: string;
   location: string;
-  efficiency: number;
   status: 'optimal' | 'warning' | 'alert';
-  type: string;
-  lat: number;
-  lng: number;
-  temperature: number;
-  power: number;
 }
 
 // Define props for the Sidebar component
 interface SidebarProps {
-  thermalSystems: ThermalSystem[]; // Array of all thermal systems
-  selectedSystem: ThermalSystem | null; // The currently selected system
-  setSelectedSystem: (system: ThermalSystem) => void; // Function to set the selected system
-  getStatusColor: (status: string) => string; // Helper function for status color (passed as prop)
-  getStatusIcon: (status: string) => React.ReactElement; // Helper function for status icon (passed as prop)
-  getEfficiencyColor: (efficiency: number) => string; // Helper function for efficiency color (passed as prop)
+  thermalSystems: ThermalSystem[];
+  selectedSystem: ThermalSystem | null;
+  setSelectedSystem: (system: ThermalSystem) => void;
+  getStatusIcon: (status: string) => React.ReactElement;
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
+  statusFilter: string;
+  setStatusFilter: (status: string) => void;
+  isLoading: boolean;
 }
+
+const statusOptions = [
+  { value: 'all', label: 'All Statuses' },
+  { value: 'optimal', label: 'Optimal' },
+  { value: 'warning', label: 'Warning' },
+  { value: 'alert', label: 'Alert' },
+];
 
 const DashboardSidebar: React.FC<SidebarProps> = ({
   thermalSystems,
   selectedSystem,
   setSelectedSystem,
-  getStatusColor,
   getStatusIcon,
-  getEfficiencyColor,
+  searchTerm,
+  setSearchTerm,
+  statusFilter,
+  setStatusFilter,
+  isLoading,
 }) => {
-  const [viewMode, setViewMode] = useState('list'); // State for list vs map view (Sidebar owns this state)
-  const [showAllStatusDropdown, setShowAllStatusDropdown] = useState(false); // State for status dropdown
-
-  // Note: The map view is NOT part of this sidebar anymore as per discussion.
-  // The viewMode toggle is conceptually part of the sidebar's filtering/display options,
-  // but the map itself is on the right. Keeping the toggle here for potential future use or re-integration.
-
   return (
-    <div className="lg:col-span-1 flex flex-col">
-      <div className="bg-gray-900 rounded-lg shadow p-6 flex-grow overflow-hidden">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-[#F2F2F2]">Thermal Systems</h2>
-          <div className="relative">
-            {/* All Status Filter Dropdown */}
-            <button
-              onClick={() => setShowAllStatusDropdown(!showAllStatusDropdown)}
-              className="flex items-center space-x-1 px-3 py-1 text-sm font-medium rounded-md transition-colors text-[#D9D9D9] hover:text-[#F2F2F2] hover:bg-gray-800"
-            >
-              <span>All Status</span>
-              <Filter className="w-4 h-4" />
-            </button>
-            {showAllStatusDropdown && (
-              <div className="absolute right-0 mt-2 w-40 bg-gray-800 border border-gray-700 rounded-md shadow-lg z-10">
-                <a href="#" className="block px-4 py-2 text-sm text-[#D9D9D9] hover:bg-gray-700">Optimal</a>
-                <a href="#" className="block px-4 py-2 text-sm text-[#D9D9D9] hover:bg-gray-700">Warning</a>
-                <a href="#" className="block px-4 py-2 text-sm text-[#D9D9D9] hover:bg-gray-700">Alert</a>
-                <a href="#" className="block px-4 py-2 text-sm text-[#D9D9D9] hover:bg-gray-700">All</a>
-              </div>
-            )}
-          </div>
+    // Use theme colors for the container
+    <div className="bg-background-light rounded-lg shadow-lg p-4 flex flex-col h-full">
+      {/* Use heading font for the title */}
+      <h2 className="font-heading text-xl font-bold text-text-light mb-4">
+        Thermal Systems
+      </h2>
+
+      <div className="mb-4 space-y-4">
+        {/* Search Input */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-medium" />
+          <input
+            type="text"
+            placeholder="Search systems..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-background-dark border border-gray-700 rounded-md pl-10 pr-4 py-2 text-text-light focus:ring-2 focus:ring-brand-accent focus:border-brand-accent outline-none transition"
+          />
         </div>
 
-        {/* Search Input (kept simple for now) */}
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#D9D9D9] w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search systems..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-md focus:ring-[#8A0A0A] focus:border-[#8A0A0A] outline-none text-[#F2F2F2]"
-            />
-          </div>
-        </div>
+        {/* Status Filter Dropdown */}
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="w-full bg-background-dark border border-gray-700 rounded-md px-3 py-2 text-text-light focus:ring-2 focus:ring-brand-accent focus:border-brand-accent outline-none appearance-none"
+        >
+          {statusOptions.map(option => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+      </div>
 
-        {/* Systems List */}
-        <div className="overflow-y-auto h-[calc(100%-8rem)]"> {/* Adjusted height to account for search/filter */}
-          <table className="min-w-full divide-y divide-gray-800">
-            <thead className="bg-gray-800 sticky top-0 z-10">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[#D9D9D9] uppercase tracking-wider">
-                  System Name
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[#D9D9D9] uppercase tracking-wider">
-                  Status
-                </th>
-                <th scope="col" className="relative px-6 py-3">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-gray-900 divide-y divide-gray-800">
-              {thermalSystems.map((system) => (
-                <tr
-                  key={system.id}
+      {/* Systems List */}
+      <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+        {isLoading ? (
+          <div className="text-center py-10 text-text-medium">Loading...</div>
+        ) : (
+          <ul className="space-y-2">
+            {thermalSystems.map((system) => (
+              <li key={system.id}>
+                <button
                   onClick={() => setSelectedSystem(system)}
-                  className={`cursor-pointer hover:bg-gray-800 ${selectedSystem?.id === system.id ? 'bg-gray-800' : ''}`}
+                  className={cn(
+                    "w-full text-left p-3 rounded-md transition-colors flex items-center justify-between",
+                    selectedSystem?.id === system.id
+                      ? 'bg-brand-primary/20' // Highlight selected item with a brand color tint
+                      : 'hover:bg-white/5'
+                  )}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#F2F2F2]">
-                    {system.name}
-                  </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${getStatusColor(system.status)} flex items-center`}>
+                  <div>
+                    <p className="font-semibold text-text-light">{system.name}</p>
+                    <p className="text-sm text-text-medium">{system.location}</p>
+                  </div>
+                  <div className={cn(
+                      'ml-2',
+                       system.status === 'optimal' && 'text-status-optimal',
+                       system.status === 'warning' && 'text-status-warning',
+                       system.status === 'alert' && 'text-status-alert'
+                  )}>
                     {getStatusIcon(system.status)}
-                    <span className="ml-2 capitalize">{system.status}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setSelectedSystem(system); }}
-                      className="text-[#8A0A0A] hover:text-[#6B0000]"
-                    >
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!isLoading && thermalSystems.length === 0 && (
+          <div className="text-center py-10">
+              <p className="text-text-medium">No systems match your criteria.</p>
+          </div>
+        )}
       </div>
     </div>
   );

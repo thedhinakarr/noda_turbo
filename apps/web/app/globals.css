@@ -1,21 +1,29 @@
-/* apps/web/app/globals.css */
+/* Import the main tailwindcss entrypoint */
 @import "tailwindcss";
-@import "@repo/tailwind-config"; /* If this contains base styles, keep it */
-@import "@repo/ui/styles.css"; /* If this contains base styles, keep it */
-@import "leaflet/dist/leaflet.css";
-/*
-   Removed:
-   :root { ... }
-   @media (prefers-color-scheme: dark) { ... }
-   body { ... }
 
-   Your main theme (background, text colors) is now managed by Tailwind classes
-   on the root <div> in apps/web/app/page.tsx (or layout.tsx)
-   e.g., <div className="min-h-screen bg-black text-[#F2F2F2]">
+/* Define the entire design system directly in the CSS,
+  as per the latest Tailwind CSS v4 documentation.
 */
+@theme {
+  --color-brand-primary: #660708;
+  --color-brand-accent: #A4161A;
+  --color-brand-highlight: #E5383B;
 
-/* Custom styles for Leaflet map markers */
-/* These prevent Leaflet from using its default blue marker icon */
+  --color-background-dark: #0B0B0A;
+  --color-background-light: #161A1D;
+
+  --color-text-default: #F5F3F4;
+  --color-text-light: #F5F3F4;
+  --color-text-medium: #B1A7A6;
+
+  --color-status-optimal: #10B981;
+  --color-status-warning: #F59E0B;
+  --color-status-alert: #E5383B;
+}
+
+/* Import third-party CSS after the theme definition */
+@import "leaflet/dist/leaflet.css";
+
 .leaflet-container .leaflet-marker-icon {
-  background-size: contain; /* Ensure custom icon fits */
+  background-size: contain;
 }

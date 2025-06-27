@@ -1,21 +1,17 @@
-// =================================================================
-// FILE: apps/graphql-api/src/schema.ts
-// (This file is now updated with the full schema)
-// =================================================================
 import { gql } from 'graphql-tag';
 
 export const typeDefs = gql`
   # The main data type, representing a row from our dashboard_data table.
   # All database columns are mapped to corresponding GraphQL types.
   type DashboardData {
-    id: ID
+    id: ID!
     building_control: String
     property_meter: String
     customer_group: String
     geo_group: String
     type_group: String
     generic_group: String
-    uuid: String
+    uuid: String!
     asset_latitude: Float
     asset_longitude: Float
     time_period: String
@@ -60,10 +56,24 @@ export const typeDefs = gql`
     fault_transfer: Float
   }
 
+  # A response wrapper for our main query. This allows us to return
+  # both the list of systems for the current page and the total count
+  # for building pagination controls.
+  type DashboardDataResponse {
+    systems: [DashboardData!]!
+    totalCount: Int!
+  }
+
   # The "Query" type is the entry point for all GET requests.
   type Query {
-    # Fetches all records from the dashboard_data table, with an optional limit.
-    allDashboardData(limit: Int = 10): [DashboardData]
+    # Fetches a paginated, filterable, and searchable list of systems.
+    allDashboardData(
+      limit: Int,
+      offset: Int,
+      status: String,
+      searchTerm: String
+    ): DashboardDataResponse
+
     # Fetches a single record by its UUID.
     dashboardDataByUuid(uuid: String!): DashboardData
   }

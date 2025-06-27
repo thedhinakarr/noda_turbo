@@ -3,9 +3,9 @@
   "files": [],
   "references": [
     { "path": "./packages/eslint-config" },
-    { "path": "./packages/tailwind-config" },
+  
     { "path": "./packages/typescript-config" },
-    { "path": "./packages/ui" },
+
     { "path": "./packages/graphql-types" },
     { "path": "./packages/common-utils" },
     { "path": "./apps/dashboard-frontend" },
