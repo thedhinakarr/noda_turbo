@@ -24,16 +24,22 @@ import {
   Globe,
   List,
   Maximize2,
-  LogOut
+  LogOut,
 } from 'lucide-react';
+
+import DashboardHeader from '../components/dashboard/Header';
+import DashboardSidebar from '../components/dashboard/Sidebar';
+import KPICard from '../components/dashboard/KPICard';
+import SystemDetailsPanel from '../components/dashboard/SystemDetailsPanel';
+
 
 const createCustomIcon = (status, L) => {
   let color;
   switch (status) {
-    case 'optimal': color = '#F2F2F2'; break;
-    case 'warning': color = '#8A0A0A'; break;
-    case 'alert': color = '#6B0000'; break;
-    default: color = '#D9D9D9';
+    case 'optimal': color = '#10B981'; break;
+    case 'warning': color = '#F59E0B'; break;
+    case 'alert': color = '#EF4444'; break;
+    default: color = '#6B7280';
   }
 
   return L && L.divIcon
@@ -53,10 +59,7 @@ export default function Dashboard() {
   const router = useRouter();
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-    if (!token) {
-      router.push('/login');
-    }
+    
   }, [router]);
 
   const { loading, error, data } = useQuery(GET_ALL_DASHBOARD_DATA, {
@@ -72,10 +75,10 @@ export default function Dashboard() {
   const thermalSystems = (data?.allDashboardData || []).map(item => ({
     id: item.id,
     name: item.building_control || 'N/A',
-    location: item.geo_group || 'Not defined', // Use 'Not defined' string as per backend
+    location: item.geo_group || 'Not defined',
     efficiency: item.efficiency,
     status: deriveStatus(item.efficiency),
-    type: item.type_group || 'Not defined', // Use 'Not defined' string as per backend
+    type: item.type_group || 'Not defined',
     lat: item.asset_latitude,
     lng: item.asset_longitude,
     temperature: item.supply_abs || 0,
@@ -109,25 +112,21 @@ export default function Dashboard() {
       const system = thermalSystems.find(s => s.id === systemId);
       if (!system) return [];
 
-      // Base points for a trend
       const baseHours = [0, 4, 8, 12, 16, 20];
-      const mockTrendFactor = (hour) => Math.sin(hour / 8 * Math.PI) * 0.1 + 1; // Creates a wave-like trend around 1
+      const mockTrendFactor = (hour) => Math.sin(hour / 8 * Math.PI) * 0.1 + 1;
 
       const data = baseHours.map(hour => {
           const trend = mockTrendFactor(hour);
 
-          // Scale mock data relative to the current system's values
           let efficiency = system.efficiency * trend;
           let temperature = system.temperature * trend;
           let power = system.power * trend;
 
-          // Introduce some randomness and ensure reasonable bounds
           efficiency = Math.min(100, Math.max(50, efficiency + (Math.random() - 0.5) * 5));
           temperature = Math.min(100, Math.max(0, temperature + (Math.random() - 0.5) * 2));
           power = Math.min(500, Math.max(0, power + (Math.random() - 0.5) * 10));
 
 
-          // Apply status-based degradation (more pronounced)
           if (system.status === 'warning') {
               efficiency = Math.max(60, efficiency * 0.95 - (Math.random() * 3));
               temperature = temperature * 1.05 + (Math.random() * 1);
@@ -164,7 +163,7 @@ export default function Dashboard() {
       case 'optimal': return <CheckCircle className="w-4 h-4" />;
       case 'warning': return <Clock className="w-4 h-4" />;
       case 'alert': return <AlertTriangle className="w-4 h-4" />;
-      default: return <CheckCircle className="w-4 h-4" />;
+    return <AlertTriangle className="w-4 h-4" />; // Default to AlertTriangle for unknown status
     }
   };
 
@@ -173,13 +172,6 @@ export default function Dashboard() {
     if (efficiency >= 80) return 'text-[#8A0A0A]';
     return 'text-[#6B0000]';
   };
-
-  const tabs = [
-    { name: 'Dashboard', icon: BarChart3 },
-    { name: 'Analytics', icon: BarChart3 },
-    { name: 'Reports', icon: FileText },
-    { name: 'Settings', icon: Settings }
-  ];
 
   const Map = dynamic(
     () => import('react-leaflet').then((mod) => mod.MapContainer),
@@ -242,138 +234,65 @@ export default function Dashboard() {
     }
   };
 
-  // Only show dashboard content if data is loaded and no error
   if (loading) return <div className="min-h-screen bg-black text-[#F2F2F2] flex items-center justify-center text-xl">Loading thermal systems...</div>;
   if (error) return <div className="min-h-screen bg-black text-[#F2F2F2] flex items-center justify-center text-xl text-red-400">Error loading thermal systems: {error.message}</div>;
 
   return (
     <div className="min-h-screen bg-black text-[#F2F2F2]">
-      <header className="bg-gray-900 shadow-sm border-b border-gray-800">
-        <div className="px-6 py-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-[#F2F2F2]">NODA CoPilot</h1>
-          <div className="flex items-center space-x-3">
-            {tabs.map(tab => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.name}
-                  onClick={() => setActiveTab(tab.name)}
-                  className={`flex items-center space-x-1 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                    activeTab === tab.name
-                      ? 'text-[#8A0A0A] bg-[#6B0000]/20'
-                      : 'text-[#D9D9D9] hover:text-[#F2F2F2] hover:bg-gray-800'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{tab.name}</span>
-                </button>
-              );
-            })}
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-1 px-3 py-2 text-sm font-medium rounded-md transition-colors text-[#D9D9D9] hover:text-[#F2F2F2] hover:bg-gray-800"
-            >
-              <LogOut className="w-4 h-4" />
-              <span>Logout</span>
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 p-6">
+      <DashboardHeader
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        handleLogout={handleLogout}
+      />
+       <main className="flex-1 p-6">
         {activeTab === 'Dashboard' && (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-full">
-
-            <div className="lg:col-span-1 flex flex-col">
-              <div className="bg-gray-900 rounded-lg shadow p-6 flex-grow overflow-hidden">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-lg font-semibold text-[#F2F2F2]">Thermal Systems</h2>
-                </div>
-
-                <div className="overflow-y-auto h-[calc(100%-4rem)]">
-                    <table className="min-w-full divide-y divide-gray-800">
-                      <thead className="bg-gray-800 sticky top-0 z-10"><tr>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[#D9D9D9] uppercase tracking-wider">
-                            System Name
-                          </th>
-                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[#D9D9D9] uppercase tracking-wider">
-                            Status
-                          </th>
-                          <th scope="col" className="relative px-6 py-3">
-                            <span className="sr-only">Actions</span>
-                          </th>
-                      </tr></thead>
-                      <tbody className="bg-gray-900 divide-y divide-gray-800">
-                        {thermalSystems.map((system) => (
-                          <tr
-                            key={system.id}
-                            onClick={() => setSelectedSystem(system)}
-                            className={`cursor-pointer hover:bg-gray-800 ${selectedSystem?.id === system.id ? 'bg-gray-800' : ''}`}
-                          >
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#F2F2F2]">
-                              {system.name}
-                            </td>
-                            <td className={`px-6 py-4 whitespace-nowrap text-sm ${getStatusColor(system.status)} flex items-center`}>
-                              {getStatusIcon(system.status)}
-                              <span className="ml-2 capitalize">{system.status}</span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setSelectedSystem(system); }}
-                                className="text-[#8A0A0A] hover:text-[#6B0000]"
-                              >
-                                View
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                </div>
-              </div>
-            </div>
-
+            <DashboardSidebar
+              thermalSystems={thermalSystems}
+              selectedSystem={selectedSystem}
+              setSelectedSystem={setSelectedSystem}
+              getStatusColor={getStatusColor}
+              getStatusIcon={getStatusIcon}
+              getEfficiencyColor={getEfficiencyColor}
+            />
             <div className="lg:col-span-3 space-y-6">
-
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="bg-gray-900 rounded-lg shadow p-5 flex items-center space-x-4">
-                      <div className="p-3 bg-[#6B0000]/20 rounded-full text-[#8A0A0A]">
-                          <Thermometer className="w-6 h-6" />
-                      </div>
-                      <div>
-                          <p className="text-sm font-medium text-[#D9D9D9]">Total Systems</p>
-                          <p className="text-2xl font-semibold text-[#F2F2F2]">{thermalSystems.length}</p>
-                      </div>
-                  </div>
-                  <div className="bg-gray-900 rounded-lg shadow p-5 flex items-center space-x-4">
-                      <div className="p-3 bg-[#6B0000]/20 rounded-full text-[#8A0A0A]">
-                          <CheckCircle className="w-6 h-6" />
-                      </div>
-                      <div>
-                          <p className="text-sm font-medium text-[#D9D9D9]">Optimal Status</p>
-                          <p className="text-2xl font-semibold text-[#F2F2F2]">
-                          {thermalSystems.filter(s => s.status === 'optimal').length}
-                          </p>
-                      </div>
-                  </div>
-                  <div className="bg-gray-900 rounded-lg shadow p-5 flex items-center space-x-4">
-                      <div className="p-3 bg-[#6B0000]/20 rounded-full text-[#8A0A0A]">
-                          <AlertTriangle className="w-6 h-6" />
-                      </div>
-                      <div>
-                          <p className="text-sm font-medium text-[#D9D9D9]">Alerts/Warnings</p>
-                          <p className="text-2xl font-semibold text-[#F2F2F2]">
-                          {thermalSystems.filter(s => s.status === 'warning' || s.status === 'alert').length}
-                          </p>
-                      </div>
-                  </div>
+                  <KPICard
+                    title="Total Systems"
+                    value={thermalSystems.length}
+                    icon={Thermometer}
+                    iconColorClass="text-[#8A0A0A]"
+                  />
+                  <KPICard
+                    title="Optimal Status"
+                    value={thermalSystems.filter(s => s.status === 'optimal').length}
+                    icon={CheckCircle}
+                    iconColorClass="text-[#F2F2F2]"
+                  />
+                  <KPICard
+                    title="Alerts/Warnings"
+                    value={thermalSystems.filter(s => s.status === 'warning' || s.status === 'alert').length}
+                    icon={AlertTriangle}
+                    iconColorClass="text-[#8A0A0A]"
+                  />
               </div>
-
+              {selectedSystem ? (
+                <SystemDetailsPanel
+                  selectedSystem={selectedSystem}
+                  getStatusColor={getStatusColor}
+                  getStatusIcon={getStatusIcon}
+                  getEfficiencyColor={getEfficiencyColor}
+                />
+              ) : (
+                <div className="bg-gray-900 rounded-lg shadow p-6 h-full flex items-center justify-center">
+                  <p className="text-[#D9D9D9] text-lg text-center">Select a system from the list on the left to view its details and data.</p>
+                </div>
+              )}
               <div className="bg-gray-900 rounded-lg shadow p-6 h-96 w-full">
                 <h2 className="text-lg font-semibold text-[#F2F2F2] mb-4">Systems Map Overview</h2>
                 {L && selectedSystem ? (
-                  <Map center={[selectedSystem.lat, selectedSystem.lng]} // Center on selected system
-                       zoom={12} // A reasonable zoom for individual buildings
+                  <Map center={[selectedSystem.lat, selectedSystem.lng]}
+                       zoom={12}
                        scrollWheelZoom={false}
                        className="h-[calc(100%-2.5rem)] w-full rounded-md overflow-hidden"
                        key={selectedSystem.id}
@@ -383,7 +302,7 @@ export default function Dashboard() {
                   >
                     <Tile
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" // Standard OSM tiles
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
                     {thermalSystems.map((system) => (
                           <LeafletMarker
@@ -410,57 +329,9 @@ export default function Dashboard() {
                         <div className="flex items-center justify-center h-full text-[#D9D9D9]">Loading Map or Select a System...</div>
                     )}
                   </div>
-
-                  {selectedSystem ? (
-                    <>
-                      <div className="bg-gray-900 rounded-lg shadow p-6">
-                        <h2 className="text-lg font-semibold text-[#F2F2F2] mb-4">System Details: {selectedSystem.name}</h2>
-                        <div className="space-y-4">
-                          <div>
-                            <p className="text-sm font-medium text-[#D9D9D9]">Name</p>
-                            <p className="text-base text-[#F2F2F2]">{selectedSystem.name}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-[#D9D9D9]">Location</p>
-                            {/* Will display "Not defined" if backend sends it */}
-                            <p className="text-base text-[#F2F2F2]">{selectedSystem.location}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-[#D9D9D9]">Type</p>
-                            {/* Will display "Not defined" if backend sends it */}
-                            <p className="text-base text-[#F2F2F2] capitalize">{selectedSystem.type}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-[#D9D9D9]">Current Efficiency</p>
-                            <p className={`text-base font-semibold ${getEfficiencyColor(selectedSystem.efficiency)}`}>
-                              {selectedSystem.efficiency}%
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-[#D9D9D9]">Status</p>
-                            <p className={`text-base font-semibold ${getStatusColor(selectedSystem.status)} flex items-center`}>
-                              {getStatusIcon(selectedSystem.status)}
-                              <span className="ml-2 capitalize">{selectedSystem.status}</span>
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-[#D9D9D9]">Temperature</p>
-                            <p className="text-base text-[#F2F2F2]">{selectedSystem.temperature} °C</p>
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-[#D9D9D9]">Power Output</p>
-                            <p className="text-base text-[#F2F2F2]">{selectedSystem.power} MW</p>
-                          </div>
-                          <button className="w-full mt-4 bg-[#8A0A0A] text-[#F2F2F2] py-2 px-4 rounded-md hover:bg-[#6B0000] transition-colors flex items-center justify-center space-x-2">
-                            <Maximize2 className="w-4 h-4" />
-                            <span>View Full Analytics</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="bg-gray-900 rounded-lg shadow p-6">
-                        <h2 className="text-lg font-semibold text-[#F2F2F2] mb-4">Performance Trends (24h)</h2>
-                        <ResponsiveContainer width="100%" height={200}>
+                  <div className="bg-gray-900 rounded-lg shadow p-6">
+                    <h2 className="text-lg font-semibold text-[#F2F2F2] mb-4">Performance Trends (24h)</h2>
+                    <ResponsiveContainer width="100%" height={200}>
                           <AreaChart data={getPerformanceDataForSystem(selectedSystem.id)} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                             <XAxis dataKey="time" axisLine={false} tickLine={false} stroke="#D9D9D9" />
                             <YAxis yAxisId="left" stroke="#8A0A0A" orientation="left" axisLine={false} tickLine={false} />
@@ -472,7 +343,6 @@ export default function Dashboard() {
                           </AreaChart>
                         </ResponsiveContainer>
                       </div>
-
                       <div className="bg-gray-900 rounded-lg shadow p-6">
                         <h2 className="text-lg font-semibold text-[#F2F2F2] mb-4">Recent Alerts for {selectedSystem.name}</h2>
                         <ul className="space-y-3">
