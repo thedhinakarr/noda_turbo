@@ -1,7 +1,8 @@
-"use client"; // This is a client component
+"use client";
 
 import React from 'react';
 import { Maximize2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // Define the shape of a thermal system item
 interface ThermalSystem {
@@ -15,25 +16,31 @@ interface ThermalSystem {
   power: number | null;
 }
 
-// Define props for the SystemDetailsPanel component
+// REFACTORED: The component's props are simplified. It no longer needs color helper functions.
 interface SystemDetailsPanelProps {
   selectedSystem: ThermalSystem;
-  getStatusColor: (status: string) => string;
   getStatusIcon: (status: string) => React.ReactElement;
-  getEfficiencyColor: (efficiency: number) => string;
 }
 
 const SystemDetailsPanel: React.FC<SystemDetailsPanelProps> = ({
   selectedSystem,
-  getStatusColor,
   getStatusIcon,
-  getEfficiencyColor,
 }) => {
   // Helper to format efficiency as a percentage string
   const formatEfficiency = (efficiency: number | null): string => {
     if (efficiency === null || efficiency === undefined) return 'N/A';
     const percentage = efficiency < 1 ? efficiency * 100 : efficiency;
     return percentage.toFixed(1);
+  };
+
+  // Helper to get the correct status color class from our theme
+  const getStatusClass = (status: string) => {
+    switch (status) {
+      case 'optimal': return 'text-status-optimal';
+      case 'warning': return 'text-status-warning';
+      case 'alert': return 'text-status-alert';
+      default: return 'text-text-medium';
+    }
   };
 
   return (
@@ -64,13 +71,15 @@ const SystemDetailsPanel: React.FC<SystemDetailsPanelProps> = ({
         <div className="space-y-4">
           <div>
             <p className="text-sm font-medium text-text-medium">Current Efficiency</p>
-            <p className={`text-base font-semibold ${getEfficiencyColor(selectedSystem.efficiency)}`}>
+            {/* REFACTORED: Apply status color directly based on system status */}
+            <p className={cn("text-base font-semibold", getStatusClass(selectedSystem.status))}>
               {formatEfficiency(selectedSystem.efficiency)}%
             </p>
           </div>
           <div>
             <p className="text-sm font-medium text-text-medium">Status</p>
-            <p className={`text-base font-semibold ${getStatusColor(selectedSystem.status)} flex items-center`}>
+            {/* REFACTORED: Apply status color directly */}
+            <p className={cn("text-base font-semibold flex items-center", getStatusClass(selectedSystem.status))}>
               {getStatusIcon(selectedSystem.status)}
               <span className="ml-2 capitalize">{selectedSystem.status}</span>
             </p>
@@ -90,7 +99,7 @@ const SystemDetailsPanel: React.FC<SystemDetailsPanelProps> = ({
         </div>
       </div>
 
-      {/* Use brand colors for the primary action button */}
+      {/* Use brand colors from the theme for the primary action button */}
       <button className="w-full mt-6 bg-brand-primary text-text-light py-2 px-4 rounded-md font-semibold hover:bg-brand-accent transition-all flex items-center justify-center space-x-2">
         <Maximize2 className="w-4 h-4" />
         <span>View Full Analytics</span>
