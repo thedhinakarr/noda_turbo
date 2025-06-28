@@ -1,20 +1,19 @@
 import './globals.css';
 import { ApolloClientProvider } from './ApolloProviderWrapper';
+import AuthProvider from './AuthProvider'; // Import the new AuthProvider
 import { Inter, Lato } from 'next/font/google';
-import { cn } from '@/lib/utils'; // A utility for combining class names
+import { cn } from '@/lib/utils';
 
-// --- NEW: Load the fonts for our design system ---
 const fontSans = Inter({
   subsets: ['latin'],
-  variable: '--font-inter', // CSS variable for the sans-serif font
+  variable: '--font-inter',
 });
 
 const fontHeading = Lato({
   subsets: ['latin'],
-  weight: ['700', '900'], // Load bold and black weights for headings
-  variable: '--font-lato',  // CSS variable for the heading font
+  weight: ['700', '900'],
+  variable: '--font-lato',
 });
-
 
 export const metadata = {
   title: 'NODA CoPilot Dashboard',
@@ -35,9 +34,12 @@ export default function RootLayout({
           fontHeading.variable
         )}
       >
-        <ApolloClientProvider>
-          {children}
-        </ApolloClientProvider>
+        {/* Wrap the application with our new AuthProvider */}
+        <AuthProvider>
+          <ApolloClientProvider>
+            {children}
+          </ApolloClientProvider>
+        </AuthProvider>
       </body>
     </html>
   );
