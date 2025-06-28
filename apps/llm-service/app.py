@@ -1,33 +1,41 @@
-# =================================================================
-# FILE: apps/llm-service/app.py
-# (Create this new file)
-# =================================================================
 from fastapi import FastAPI
 from pydantic import BaseModel
+import time
+import json
+from typing import Optional # <-- FIX: Import 'Optional' for older Python versions
 
-# Initialize the FastAPI app
-app = FastAPI()
-
-# Define the request body model for the chat endpoint
+# Define the data model for the incoming request from the frontend.
 class ChatRequest(BaseModel):
     message: str
+    # FIX: Use Optional[str] for compatibility with Python 3.9
+    context: Optional[str] = None
 
+# Create the FastAPI application instance
+app = FastAPI()
+
+# Define the main chat endpoint
+@app.post("/api/v1/chat")
+async def chat(request: ChatRequest):
+    """
+    This endpoint receives a user's message and the dashboard context.
+    For now, it returns a hardcoded placeholder response.
+    """
+    print("Received message:", request.message)
+    if request.context:
+        try:
+            context_data = json.loads(request.context)
+            print("Received context:", context_data.get('selectedSystem', {}).get('name'))
+        except json.JSONDecodeError:
+            print("Received invalid context format")
+
+    time.sleep(1.5)
+
+    return {
+        "response": "This is a placeholder response from the Python LLM service. The connection is working!"
+    }
+
+# A simple root endpoint to confirm the service is running
 @app.get("/")
 def read_root():
-    return {"message": "LLM Service is running"}
+    return {"status": "NODA LLM Service is running"}
 
-@app.post("/api/chat")
-def chat_with_llm(request: ChatRequest):
-    """
-    Placeholder for chat functionality.
-    In a real application, this is where you would:
-    1. Get the user's message from request.message.
-    2. Fetch context from the PostgreSQL database.
-    3. Construct a detailed prompt.
-    4. Call the external LLM (e.g., Gemini API).
-    5. Return the LLM's response.
-    """
-    print(f"Received message: {request.message}")
-    
-    # Return a dummy response for now
-    return {"response": f"The LLM has received your message: '{request.message}'"}
