@@ -1,10 +1,5 @@
-// apps/web/app/auth.ts
 import NextAuth from "next-auth";
 import AzureADProvider from "next-auth/providers/azure-ad";
-
-// --- TEMPORARY DIAGNOSTIC STEP ---
-// We are hardcoding the Client ID here to ensure it's not an environment variable loading issue.
-const clientId = "29a528ea-f58d-49fe-9da8-fbb53a839d55"; 
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -12,21 +7,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientId: process.env.AUTH_AZURE_AD_CLIENT_ID,
       clientSecret: process.env.AUTH_AZURE_AD_CLIENT_SECRET,
       tenantId: process.env.AUTH_AZURE_AD_TENANT_ID,
-      authorization: {
-        params: {
-          // Using the hardcoded Client ID to construct the scope
-          scope: `api://${clientId}/access_as_user openid profile email`,
-        },
-      },
+      // This is crucial to get the access token
+      authorization: { params: { scope: "openid profile email" } },
     }),
   ],
   callbacks: {
+    // This callback is called whenever a JWT is created or updated.
+    // We are adding the access token to the JWT here.
     async jwt({ token, account }) {
       if (account) {
         token.accessToken = account.access_token;
       }
       return token;
     },
+    // This callback is called whenever a session is checked.
+    // We are adding the access token to the session object here.
     async session({ session, token }) {
       session.accessToken = token.accessToken as string;
       return session;

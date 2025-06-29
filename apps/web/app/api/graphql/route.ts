@@ -1,116 +1,92 @@
 // apps/web/app/api/graphql/route.ts
-import { cookies } from 'next/headers';
+import { auth } from "@/auth"; // Import the auth function from our central auth.ts file
+import { type NextRequest } from "next/server";
 
+// Helper function to get the backend URL from environment variables
 const getBackendGraphQLUrl = () => {
-  const backendUrl = process.env.BACKEND_GRAPHQL_API_URL || 'http://localhost:4000/api/graphql';
+  const backendUrl =
+    process.env.BACKEND_GRAPHQL_API_URL || "http://localhost:4000/api/graphql";
   console.log(`[GraphQL Proxy] Using backend URL: ${backendUrl}`);
   return backendUrl;
 };
 
-export async function POST(request: Request) {
+// This function will handle both GET and POST requests to avoid code duplication
+async function handler(request: NextRequest) {
   try {
     const backendGraphQLUrl = getBackendGraphQLUrl();
     const headers = new Headers(request.headers);
 
-    // FIX APPLIED HERE: Explicitly await the cookies() call
-    const cookieStore = await cookies(); // <--- ENSURE 'await' IS HERE
-    const authToken = cookieStore.get('authToken')?.value;
+    // Get the session object from Auth.js. This contains the user's session and the accessToken.
+    const session = await auth();
 
-    if (authToken) {
-      headers.set('Authorization', `Bearer ${authToken}`);
-      console.log('[GraphQL Proxy] Set Authorization header from cookie.');
+    // Check if the session and accessToken exist
+    if (session?.accessToken) {
+      headers.set("Authorization", `Bearer ${session.accessToken}`);
+      console.log("[GraphQL Proxy] Set Authorization header from Auth.js session.");
     } else {
-      console.log('[GraphQL Proxy] No authToken cookie found for Authorization header.');
-      headers.delete('Authorization');
+      console.log("[GraphQL Proxy] No active session found. Forwarding request without Authorization header.");
+      headers.delete("Authorization");
     }
 
-    headers.set('Content-Type', 'application/json');
-    headers.delete('host');
-    headers.delete('connection');
+    // Clean up headers before forwarding
+    headers.set("Content-Type", "application/json");
+    headers.delete("host");
+    headers.delete("connection");
 
-    const requestBody = await request.json();
-    console.log('[GraphQL Proxy] Forwarding GraphQL query:', JSON.stringify(requestBody, null, 2));
+    // Handle POST requests (GraphQL mutations/queries)
+    if (request.method === "POST") {
+      const requestBody = await request.json();
+      console.log(
+        "[GraphQL Proxy] Forwarding GraphQL query:",
+        JSON.stringify(requestBody, null, 2),
+      );
 
-    const backendResponse = await fetch(backendGraphQLUrl, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(requestBody),
-    });
+      const backendResponse = await fetch(backendGraphQLUrl, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(requestBody),
+      });
 
-    console.log(`[GraphQL Proxy] Backend responded with status: ${backendResponse.status}`);
+      return backendResponse; // Directly return the response from the backend
+    }
 
-    if (!backendResponse.ok) {
-        const errorResponseBody = await backendResponse.text();
-        console.error(`[GraphQL Proxy] Backend returned non-OK status (${backendResponse.status}). Response body: ${errorResponseBody}`);
-        return new Response(errorResponseBody, {
-            status: backendResponse.status,
-            statusText: backendResponse.statusText,
-            headers: backendResponse.headers,
+    // Handle GET requests (can be used for GraphQL introspection, etc.)
+    if (request.method === "GET") {
+        const url = new URL(request.url);
+        const backendUrlWithParams = new URL(backendGraphQLUrl);
+        url.searchParams.forEach((value, key) => {
+          backendUrlWithParams.searchParams.append(key, value);
         });
+
+        const backendResponse = await fetch(backendUrlWithParams.toString(), {
+            method: 'GET',
+            headers: headers,
+        });
+
+        return backendResponse; // Directly return the response from the backend
     }
 
-    return new Response(backendResponse.body, {
-      status: backendResponse.status,
-      statusText: backendResponse.statusText,
-      headers: backendResponse.headers,
-    });
+    // If not GET or POST, return a 405 Method Not Allowed
+    return new Response("Method Not Allowed", { status: 405 });
 
   } catch (error) {
-    console.error('API route /api/graphql (proxy POST) caught an exception:', error);
+    console.error(`API route /api/graphql (proxy ${request.method}) caught an exception:`, error);
+    // Ensure you are running the `graphql-api` service. The ECONNREFUSED error means the connection was refused.
+    if (error.cause?.code === 'ECONNREFUSED') {
+        return new Response(
+            JSON.stringify({ errors: [{ message: "Could not connect to the backend GraphQL service. Please ensure it is running." }] }),
+            { status: 503, headers: { 'Content-Type': 'application/json' } } // 503 Service Unavailable
+        );
+    }
+
     return new Response(
-      JSON.stringify({ errors: [{ message: `GraphQL proxy error (POST): ${error.message}` }] }),
+      JSON.stringify({ errors: [{ message: `GraphQL proxy error: ${error.message}` }] }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
+        headers: { "Content-Type": "application/json" },
+      },
     );
   }
 }
 
-export async function GET(request: Request) { // Assuming this is also in your file
-  try {
-    const backendGraphQLUrl = getBackendGraphQLUrl();
-    const headers = new Headers(request.headers);
-
-    // Also add cookie handling for GET requests if they might be authenticated
-    const cookieStore = await cookies(); // <--- ENSURE 'await' IS HERE for GET
-    const authToken = cookieStore.get('authToken')?.value;
-    if (authToken) {
-        headers.set('Authorization', `Bearer ${authToken}`);
-    } else {
-        headers.delete('Authorization');
-    }
-
-    headers.delete('host');
-    headers.delete('connection');
-
-    const url = new URL(request.url);
-    const backendUrlWithParams = new URL(backendGraphQLUrl);
-    url.searchParams.forEach((value, key) => {
-      backendUrlWithParams.searchParams.append(key, value);
-    });
-
-    const backendResponse = await fetch(backendUrlWithParams.toString(), {
-      method: 'GET',
-      headers: headers,
-    });
-
-    console.log(`[GraphQL Proxy GET] Backend responded with status: ${backendResponse.status}`);
-
-    return new Response(backendResponse.body, {
-      status: backendResponse.status,
-      statusText: backendResponse.statusText,
-      headers: backendResponse.headers,
-    });
-
-  } catch (error) {
-    console.error('API route /api/graphql (proxy GET) caught an exception:', error);
-    return new Response(
-      JSON.stringify({ errors: [{ message: `GraphQL proxy error (GET): ${error.message}` }] }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-  }
-}
+export { handler as GET, handler as POST };
