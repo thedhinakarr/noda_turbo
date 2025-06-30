@@ -1,21 +1,20 @@
-// apps/web/app/auth.ts
+// In apps/web/app/auth.ts
+
 import NextAuth from "next-auth";
 import AzureADProvider from "next-auth/providers/azure-ad";
-
-// --- TEMPORARY DIAGNOSTIC STEP ---
-// We are hardcoding the Client ID here to ensure it's not an environment variable loading issue.
-const clientId = "29a528ea-f58d-49fe-9da8-fbb53a839d55"; 
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     AzureADProvider({
-      clientId: process.env.AUTH_AZURE_AD_CLIENT_ID,
-      clientSecret: process.env.AUTH_AZURE_AD_CLIENT_SECRET,
-      tenantId: process.env.AUTH_AZURE_AD_TENANT_ID,
+      clientId: process.env.AZURE_AD_CLIENT_ID,
+      clientSecret: process.env.AZURE_AD_CLIENT_SECRET,
+      tenantId: process.env.AZURE_AD_TENANT_ID,
+      // By providing the wellKnown URL, NextAuth can automatically discover
+      // the correct endpoints, including the end_session_endpoint for logout.
+      wellKnown: `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/v2.0/.well-known/openid-configuration`,
       authorization: {
         params: {
-          // Using the hardcoded Client ID to construct the scope
-          scope: `api://${clientId}/access_as_user openid profile email`,
+          scope: "openid profile email User.Read",
         },
       },
     }),
@@ -28,7 +27,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      session.accessToken = token.accessToken as string;
+      session.accessToken = token.accessToken;
       return session;
     },
   },

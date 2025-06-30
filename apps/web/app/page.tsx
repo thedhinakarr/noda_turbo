@@ -14,6 +14,7 @@ import {
   CheckCircle,
   Clock,
 } from 'lucide-react';
+import { signOut } from "next-auth/react";
 
 import DashboardHeader from '@/components/dashboard/Header';
 import DashboardSidebar from '@/components/dashboard/Sidebar';
@@ -146,18 +147,14 @@ export default function Dashboard() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      const response = await fetch('/api/auth/logout', { method: 'POST' });
-      if (response.ok) {
-        router.push('/login');
-      } else {
-        console.error('Failed to log out.');
-      }
-    } catch (err) {
-      console.error('Error during logout:', err);
-    }
-  };
+const handleLogout = async () => {
+  try {
+    // This will now correctly trigger the federated logout
+    await signOut({ redirect: true, callbackUrl: "/login" });
+  } catch (error) {
+    console.error("An error occurred during sign out:", error);
+  }
+};
   
   if (!isMounted) {
     return (
