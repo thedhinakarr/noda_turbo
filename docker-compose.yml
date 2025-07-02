@@ -1,9 +1,7 @@
-# FILE: ./docker-compose.yml
-
 services:
   # --- Application Services ---
   db:
-    image: pgvector/pgvector:pg16  # MODIFIED: Use pgvector-enabled image
+    image: pgvector/pgvector:pg16
     container_name: noda_turbo_postgres
     restart: always
     ports: ["${POSTGRES_PORT}:5432"]
@@ -41,7 +39,7 @@ services:
     restart: on-failure
     environment:
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
-      GEMINI_API_KEY: ${GEMINI_API_KEY} # ADDED: API key for embedding
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
     volumes: ["./apps/data-ingestion-service/data:/app/apps/data-ingestion-service/data"]
 
   graphql-api:
@@ -56,10 +54,12 @@ services:
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
+      # MODIFIED: Added dependency on the llm-service to ensure correct startup order.
+      #llm-service: { condition: service_healthy }
     environment:
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
       REDIS_URL: "redis://redis:6379"
-      LLM_SERVICE_URL: "http://llm-service:5001" # ADDED: Internal URL for the AI service
+      LLM_SERVICE_URL: "http://llm-service:5001"
       PORT: 4000
 
   llm-service:
@@ -68,13 +68,18 @@ services:
       dockerfile: ./apps/llm-service/Dockerfile
     container_name: noda_turbo_llm_service
     restart: always
-    # MODIFIED: Removed 'ports' as this is an internal-only service
     depends_on:
       db: { condition: service_healthy }
     environment:
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
-      GEMINI_API_KEY: ${GEMINI_API_KEY} # ADDED: API key for generation
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
       PORT: 5001
+    # ADDED: Healthcheck to ensure the service is ready before others connect.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/docs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   docs:
     build:
@@ -89,3 +94,8 @@ services:
 volumes:
   db_data:
   redis_data:
+
+# Define the network for all services to communicate
+networks:
+  default:
+    name: noda_network

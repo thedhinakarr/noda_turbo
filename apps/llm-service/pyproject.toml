@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "llm-service"
+version = "0.1.0"
+description = "The Expert Analyst for NODA Copilot. Handles RAG and communication with the Gemini API."
+authors = ["NODA Team"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.111.0"
+uvicorn = {extras = ["standard"], version = "^0.29.0"}
+google-generativeai = "^0.5.4"
+asyncpg = "^0.29.0"
+pgvector = "^0.2.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
