@@ -1,0 +1,12 @@
+{
+  "name": "llm-service",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install": "poetry install --no-root",
+    "dev": "poetry run python main.py",
+    "test": "poetry run pytest",
+    "lint": "poetry run black . && poetry run flake8 .",
+    "build:docker": "docker build -t your-registry/llm-service:latest ."
+  }
+}
