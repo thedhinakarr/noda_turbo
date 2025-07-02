@@ -1,25 +1,31 @@
-// =================================================================
 // FILE: apps/data-ingestion-service/src/index.ts
-// (Updated with the new, robust migration runner)
-// =================================================================
-import { connectDb } from './db';
-import { watchIncomingDirectory } from './watcher';
-import pool from './db';
-import fs from 'fs/promises';
+
+import dotenv from 'dotenv';
 import path from 'path';
+import { Pool } from 'pg';
+import fs from 'fs/promises';
+import { WatcherService } from './watcher';
+import { DatabaseService } from './db';
+import { DbLoaderService } from './db-loader';
+
+// Load environment variables from the root .env file
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 /**
- * Reads all .sql files from the migrations directory and executes them
- * in alphabetical order. This ensures the database schema is always up to date.
+ * A standalone function to run migrations before initializing the main services.
+ * This resolves the race condition by ensuring the database schema is ready first.
  */
-const runMigrations = async () => {
-  console.log('Checking database schema...');
+async function runMigrations() {
+  console.log('Connecting to database to run migrations...');
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   const client = await pool.connect();
+  
+  console.log('Checking database schema...');
   try {
     const migrationDir = path.resolve(__dirname, 'migrations');
     const migrationFiles = (await fs.readdir(migrationDir))
       .filter(file => file.endsWith('.sql'))
-      .sort(); // Sort files to ensure they run in order (e.g., 001, 002)
+      .sort();
 
     for (const file of migrationFiles) {
       console.log(`Applying migration: ${file}`);
@@ -34,17 +40,37 @@ const runMigrations = async () => {
     process.exit(1);
   } finally {
     client.release();
+    await pool.end(); // End this temporary pool connection
   }
-};
+}
 
 /**
  * Main application entrypoint.
  */
-const main = async () => {
-  console.log('Starting Data Ingestion Service...');
-  await connectDb();
-  await runMigrations(); // This will now run all .sql files
-  watchIncomingDirectory();
-};
+async function main() {
+  console.log("Starting NODA Data Ingestion Service...");
 
+  try {
+    // STEP 1: Run migrations FIRST to ensure the database schema is correct.
+    await runMigrations();
+
+    // STEP 2: Now that migrations are complete, initialize the core services.
+    // The DatabaseService constructor can now safely register the vector type.
+    const databaseService = new DatabaseService();
+    const dbLoaderService = new DbLoaderService(databaseService);
+    const watcherService = new WatcherService(dbLoaderService);
+
+    // STEP 3: Start watching the 'incoming' directory for new files.
+    const incomingDirectory = path.resolve(__dirname, '../data/incoming');
+    watcherService.watchDirectory(incomingDirectory);
+
+    console.log(`Service is now watching the directory: ${incomingDirectory}`);
+
+  } catch (error) {
+    console.error("An unhandled error occurred during service startup:", error);
+    process.exit(1);
+  }
+}
+
+// Run the main function
 main();

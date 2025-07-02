@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "node server.cjs",
+    "dev": "next dev --port 3000 --turbo --experimental-https --experimental-https-key ./localhost-key.pem --experimental-https-cert ./localhost.pem",
     "build": "next build",
     "start": "next start",
     "lint": "next lint --max-warnings 0",
