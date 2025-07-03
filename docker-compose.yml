@@ -68,6 +68,8 @@ services:
       dockerfile: ./apps/llm-service/Dockerfile
     container_name: noda_turbo_llm_service
     restart: always
+    ports:
+      - "5001:5001"
     depends_on:
       db: { condition: service_healthy }
     environment:
@@ -75,11 +77,14 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       PORT: 5001
     # ADDED: Healthcheck to ensure the service is ready before others connect.
+    # ... (build, container_name, restart, depends_on, environment sections)
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/docs"]
+      # --- REPLACE THE TEST COMMAND WITH THIS ---
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s # Gives the container 30s to start up before checking
 
   docs:
     build:

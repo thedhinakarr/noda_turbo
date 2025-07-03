@@ -16,6 +16,21 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "install": {
+      "inputs": ["pnpm-lock.yaml", "poetry.lock"],
+      "outputs": ["node_modules/**", ".venv/**"],
+      "cache": false
+    },
+    "llm-service#lint": {
+      "inputs": ["apps/llm-service/**/*.py"]
+    },
+    "llm-service#build:docker": {
+      "inputs": [
+        "apps/llm-service/main.py",
+        "apps/llm-service/pyproject.toml",
+        "apps/llm-service/Dockerfile"
+      ]
     }
   }
 }

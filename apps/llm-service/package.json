@@ -3,10 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "install": "poetry install --no-root",
-    "dev": "poetry run python main.py",
-    "test": "poetry run pytest",
-    "lint": "poetry run black . && poetry run flake8 .",
-    "build:docker": "docker build -t your-registry/llm-service:latest ."
+    "dev": "echo 'Use docker-compose up to run the dev environment'",
+    "lint": "docker run --rm -v $(pwd):/app -w /app your-registry/llm-service poetry run ruff check ."
   }
 }
