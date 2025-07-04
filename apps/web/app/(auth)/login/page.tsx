@@ -14,7 +14,7 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen bg-background-dark text-text-default flex items-center justify-center p-4">
-      <div className="bg-background-light p-8 rounded-lg shadow-xl w-full max-w-md text-center">
+      <div className="bg-background-card p-8 rounded-lg shadow-xl w-full max-w-md text-center">
         <h2 className="text-3xl font-bold text-text-light mb-4">
           NODA CoPilot
         </h2>

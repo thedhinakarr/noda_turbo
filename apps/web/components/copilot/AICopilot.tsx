@@ -62,12 +62,7 @@ export const AICopilot = () => {
 
   return (
     <div className="flex flex-col h-full bg-background-light rounded-lg shadow-lg">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-700 flex items-center gap-3">
-        <Bot className="text-brand-accent w-6 h-6" />
-        <h2 className="font-heading text-xl font-bold text-text-light">NODA CoPilot</h2>
-      </div>
-
+     
       {/* Message Area */}
       <div className="flex-1 p-4 space-y-4 overflow-y-auto">
         {messages.map((message) => (

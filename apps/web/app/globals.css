@@ -1,66 +1,70 @@
-/* Import the main tailwindcss entrypoint, which includes base and utilities */
+/* Import the main tailwindcss entrypoint */
 @import "tailwindcss";
 
-/* Define the entire design system directly in CSS using @theme */
+/* Define the design system using @theme.
+  These variables will serve as the DEFAULT (Dark Mode).
+*/
 @theme {
-  /* --- NEW: Define the primary sans-serif font --- */
   --font-sans: "Inter", sans-serif;
 
+  /* --- BRAND COLORS (Re-added) --- */
   --color-brand-primary: #A01543;
   --color-brand-accent: #C51F56;
   --color-brand-highlight: #E63946;
 
-  --color-background-dark:#1C1C1C;
-  --color-background-light: #2A2A2A66;
+  /* --- Dark Mode Color Palette (Default) --- */
+  --color-background-dark: #1C1C1C;
+  --color-background-card: #2A2A2A66;
+  --color-background-sidebar: #22272B;
+  --color-text-primary: #EAEBEE;
+  --color-text-secondary: #8A9199;
+  --color-text-logo: #D34371; /* We can use a brand color for the logo */
+  --color-border: #374151;
 
-  --color-text-default: #F5F3F4;
-  --color-text-light: #F5F3F4;
-  --color-text-medium: #B1A7A6;
+  /* --- Accent Colors --- */
+  --color-accent-yellow: #FACC15;
+  --color-accent-green: #34D399;
+  --color-accent-red: #F87171;
+  --color-accent-blue: #60A5FA;
+}
 
-  --color-status-optimal: #10B981;
-  --color-status-warning: #F59E0B;
-  --color-status-alert: #E5383B;
+/* Define the overrides for LIGHT MODE. */
+@layer base {
+  .light {
+    --color-background-dark: #F9FAFB;
+    --color-background-card: #FFFFFF;
+    --color-background-sidebar: #F3F4F6;
+    --color-text-primary: #111827;
+    --color-text-secondary: #6B7280;
+    --color-border: #a4a5a7;
+  }
 }
 
 /* Apply base styles using the theme variables */
 @layer base {
   body {
     background-color: var(--color-background-dark);
-    color: var(--color-text-default);
-    /* Apply the font defined above */
+    color: var(--color-text-primary);
     font-family: var(--font-sans);
   }
 }
 
-/* Import third-party CSS after the theme definition */
+/* --- Third-Party and Custom CSS (remains the same) --- */
 @import "leaflet/dist/leaflet.css";
 
-/* Custom styles for Leaflet map markers */
-.leaflet-container .leaflet-marker-icon {
-  background-size: contain;
-}
+/* ... (rest of the file remains the same) ... */
 
-/* Custom Scrollbar Styling */
-/* Works on WebKit-based browsers like Chrome, Safari, Edge */
-
-/* The main scrollbar track (the background) */
 ::-webkit-scrollbar-track {
-  background: var(--color-background-light);
+  background: var(--color-background-dark);
 }
-
-/* The draggable scrolling handle */
 ::-webkit-scrollbar-thumb {
-  background-color: var(--color-brand-primary);
+  background-color: var(--color-border);
   border-radius: 10px;
-  border: 2px solid var(--color-background-light);
+  border: 3px solid var(--color-background-dark);
 }
-
-/* The handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--color-brand-accent);
+  background-color: var(--color-text-secondary);
 }
-
-/* The scrollbar itself */
 ::-webkit-scrollbar {
   width: 12px;
   height: 12px;
