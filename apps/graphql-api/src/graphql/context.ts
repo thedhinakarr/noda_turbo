@@ -1,40 +1,26 @@
-// apps/graphql-api/src/graphql/context.ts
+// noda_turbo/apps/graphql-api/src/graphql/context.ts
 import pool from './db';
 import { Request } from 'express';
-import jwt, { JwtHeader, SigningKeyCallback } from 'jsonwebtoken';
-import jwksClient from 'jwks-rsa';
+import * as jose from 'jose';
 
-const AZURE_AD_CLIENT_ID = process.env.AUTH_AZURE_AD_CLIENT_ID;
-const jwksUri = `https://login.microsoftonline.com/common/discovery/v2.0/keys`;
+// --- SETUP ---
+const CLIENT_ID = process.env.AUTH_MICROSOFT_ENTRA_ID_ID;
 
-const client = jwksClient({
-  jwksUri: jwksUri,
-});
-
-function getSigningKey(header: JwtHeader, callback: SigningKeyCallback) {
-  if (!header.kid) {
-    return callback(new Error("Token is missing 'kid' in the header."));
-  }
-
-  client.getSigningKey(header.kid, (err, key) => {
-    if (err) {
-      console.error("Error getting signing key:", err);
-      return callback(err);
-    }
-    if (!key) {
-        return callback(new Error("Signing key not found."));
-    }
-    const signingKey = key.getPublicKey();
-    callback(null, signingKey);
-  });
+if (!CLIENT_ID) {
+  throw new Error("CRITICAL: Missing Azure AD environment variable: AUTH_MICROSOFT_ENTRA_ID_ID");
 }
 
+// Use the 'common' endpoint for JWKS to support all account types.
+const jwksUri = `https://login.microsoftonline.com/common/discovery/v2.0/keys`;
+const JWKS = jose.createRemoteJWKSet(new URL(jwksUri));
+
+// --- INTERFACES ---
 export interface UserPayload {
-  oid: string; 
-  email?: string; // Email can sometimes be optional
-  name: string;
+  oid: string;
+  preferred_username?: string;
+  name?: string;
   roles?: string[];
-  tid: string; 
+  tid: string;
 }
 
 export interface MyContext {
@@ -42,75 +28,47 @@ export interface MyContext {
   user?: UserPayload;
 }
 
+// --- CONTEXT FACTORY ---
 export const createContext = async ({ req }: { req: Request }): Promise<MyContext> => {
-  console.log('--- Creating context for new request ---');
   const authHeader = req.headers.authorization || '';
 
   if (!authHeader.startsWith('Bearer ')) {
-    console.log('No Bearer token found in header. Returning public context.');
     return { db: pool };
   }
 
   const token = authHeader.substring(7);
 
-  const unverifiedDecodedToken = jwt.decode(token, { complete: true });
-  console.log('--- Unverified Token Content (for debugging) ---');
-  console.log('Header:', unverifiedDecodedToken?.header);
-  console.log('Payload:', unverifiedDecodedToken?.payload);
-  console.log('------------------------------------------------');
-
   try {
-    const decodedToken = await new Promise<UserPayload>((resolve, reject) => {
-      jwt.verify(
-        token,
-        getSigningKey,
-        {
-          audience: AZURE_AD_CLIENT_ID, 
-          algorithms: ['RS256'],
-        },
-        (err, decoded) => {
-          if (err) {
-            return reject(err);
-          }
-          resolve(decoded as UserPayload);
-        }
-      );
+    // The audience check is the most important validation here.
+    const { payload } = await jose.jwtVerify(token, JWKS, {
+      audience: CLIENT_ID,
     });
 
-    console.log(`Token verified successfully. User OID: ${decodedToken.oid} from Tenant ID: ${decodedToken.tid}`);
+    const userOid = payload.oid as string;
 
-    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [decodedToken.oid]);
+    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [userOid]);
     let userInDb = userResult.rows[0];
 
     if (!userInDb) {
-      console.log(`User with OID ${decodedToken.oid} not found in local DB. Creating new user...`);
+      console.log(`User with OID ${userOid} not found. Creating new user...`);
+      const userFullName = payload.name || payload.preferred_username;
       
-      // ========================= THE FIX =========================
-      // The original migration does not have a 'full_name' column, but it does have
-      // 'email' and requires a 'password_hash'. We will insert the user's email
-      // and a placeholder for the password_hash, since it's no longer used for login.
-      // NOTE: The 'id' column in your migration is a UUID, but the 'oid' from the token is also a UUID,
-      // so we can use it directly as the primary key.
+      // Re-added the 'name' column to the INSERT statement to match the updated DB schema.
       const newUserResult = await pool.query(
-        'INSERT INTO users (id, email, password_hash) VALUES ($1, $2, $3) RETURNING *',
-        [decodedToken.oid, decodedToken.email || decodedToken.name, 'SSO_USER']
+        'INSERT INTO users (id, name, email, password_hash) VALUES ($1, $2, $3, $4) RETURNING *',
+        [userOid, userFullName, payload.preferred_username, 'SSO_USER']
       );
-      // =========================================================
-
       userInDb = newUserResult.rows[0];
-      console.log(`New user created: ${userInDb.email}`);
-    } else {
-        console.log(`User found in local DB: ${userInDb.email}`);
     }
-
-    return { db: pool, user: decodedToken };
+    
+    return { db: pool, user: userInDb };
 
   } catch (error) {
     if (error instanceof Error) {
-        console.error('Token verification failed:', error.message);
+      console.error('Error in createContext:', error.message);
     } else {
-        console.error('An unknown error occurred during token verification.');
+      console.error('An unknown error occurred in createContext.');
     }
-    return { db: pool }; 
+    return { db: pool };
   }
 };

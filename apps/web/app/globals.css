@@ -3,12 +3,15 @@
 
 /* Define the entire design system directly in CSS using @theme */
 @theme {
-  --color-brand-primary: #660708;
-  --color-brand-accent: #A4161A;
-  --color-brand-highlight: #E5383B;
+  /* --- NEW: Define the primary sans-serif font --- */
+  --font-sans: "Inter", sans-serif;
 
-  --color-background-dark: #0B0B0A;
-  --color-background-light: #161A1D;
+  --color-brand-primary: #A01543;
+  --color-brand-accent: #C51F56;
+  --color-brand-highlight: #E63946;
+
+  --color-background-dark:#1C1C1C;
+  --color-background-light: #2A2A2A66;
 
   --color-text-default: #F5F3F4;
   --color-text-light: #F5F3F4;
@@ -24,6 +27,8 @@
   body {
     background-color: var(--color-background-dark);
     color: var(--color-text-default);
+    /* Apply the font defined above */
+    font-family: var(--font-sans);
   }
 }
 

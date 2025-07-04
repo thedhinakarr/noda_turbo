@@ -53,7 +53,7 @@ const DashboardHeader: React.FC<HeaderProps> = ({ activeTab, setActiveTab, handl
                   className={cn(
                     "flex items-center space-x-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
                     activeTab === tab.name
-                      ? 'text-brand-highlight bg-brand-primary/10' // Active tab uses brand color
+                      ? 'text-white bg-brand-primary/10' // Active tab uses brand color
                       : 'text-text-medium hover:text-text-default hover:bg-background-dark/50' // Inactive tab styles
                   )}
                 >

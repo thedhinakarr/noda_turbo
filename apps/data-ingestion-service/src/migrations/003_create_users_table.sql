@@ -1,6 +1,5 @@
 -- =================================================================
 -- FILE: apps/data-ingestion-service/src/migrations/003_create_users_table.sql
--- (Create this NEW file)
 -- =================================================================
 
 -- We need to enable the 'pgcrypto' extension to use gen_random_uuid().
@@ -12,6 +11,9 @@ CREATE TABLE IF NOT EXISTS users (
   -- Use a UUID for the primary key for better security and scalability.
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
+  -- The user's full name, retrieved from the identity provider.
+  name TEXT,
+
   -- The user's email address. It must be unique.
   email TEXT NOT NULL UNIQUE,
   

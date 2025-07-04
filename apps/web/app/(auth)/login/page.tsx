@@ -5,20 +5,17 @@ import { signIn } from 'next-auth/react';
 import { LogIn } from 'lucide-react';
 
 const LoginPage = () => {
-  // We will force the correct scope directly in the signIn call.
+  // This function signs the user in with the specified provider.
+  // The scope and other authorization parameters are now correctly handled
+  // by the central configuration in your `auth.ts` file.
   const handleLogin = () => {
-    const clientId = "29a528ea-f58d-49fe-9da8-fbb53a839d55"; // Your App's Client ID
-    const customScope = `api://${clientId}/access_as_user openid profile email`;
-
-    // The third argument to signIn is an object for authorization parameters.
-    // We are forcing the scope here to bypass any configuration caching issues.
-    signIn('azure-ad', { callbackUrl: '/' }, { scope: customScope });
+    signIn('microsoft-entra-id', { callbackUrl: '/' });
   };
 
   return (
-    <div className="min-h-screen bg-background-dark text-text flex items-center justify-center p-4 animate-fade-in">
-      <div className="bg-background-light p-8 rounded-lg shadow-xl w-full max-w-md border border-gray-800 text-center">
-        <h2 className="text-3xl font-bold text-text-light mb-4 font-heading">
+    <div className="min-h-screen bg-background-dark text-text-default flex items-center justify-center p-4">
+      <div className="bg-background-light p-8 rounded-lg shadow-xl w-full max-w-md text-center">
+        <h2 className="text-3xl font-bold text-text-light mb-4">
           NODA CoPilot
         </h2>
         <p className="text-text-medium mb-8">

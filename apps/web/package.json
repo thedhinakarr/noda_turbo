@@ -13,6 +13,7 @@
   "dependencies": {
     "@apollo/client": "^3.13.8",
     "@apollo/experimental-nextjs-app-support": "^0.12.2",
+    "@auth/core": "^0.40.0",
     "@headlessui/react": "^2.2.4",
     "@hookform/resolvers": "^5.1.1",
     "@tailwindcss/postcss": "^4.1.11",
