@@ -66,28 +66,18 @@ const startServer = async () => {
   app.use('/api/auth', authRoutes);
   app.use('/api/export', exportRoutes);
 
-  // +++ ADD THIS ENTIRE SECTION FOR THE NEW AI STREAMING GATEWAY +++
   const llmServiceUrl = process.env.LLM_SERVICE_URL || 'http://llm-service:5001';
 
   app.post('/api/copilot-stream', async (req, res) => {
-    console.log('Received request on /api/copilot-stream');
+    console.log('[PROXY] Request received. Calling LLM service...');
 
-    // 1. Security Check: This is where you would validate the user's token.
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return res.status(401).send('Unauthorized');
-    }
-    // In a real implementation, you would use your `createContext` logic here
-    // to fully validate the token against Entra ID.
-
-    // 2. Open the Server-Sent Events (SSE) stream to the client
+    // Set headers for Server-Sent Events (SSE) immediately
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
+    res.flushHeaders(); // Flush headers to establish the connection
 
     try {
-      // Use axios to get a stream from the llm-service
       const response = await axios({
         method: 'POST',
         url: `${llmServiceUrl}/api/v1/chat`,
@@ -95,24 +85,24 @@ const startServer = async () => {
         responseType: 'stream',
       });
 
-      // Pipe the stream from the llm-service directly to the client
+      console.log('[PROXY] Connected to LLM service. Piping response...');
+
+      // Pipe the raw data from the llm-service directly to the client
       response.data.pipe(res);
 
-      // Handle stream closing
       req.on('close', () => {
-        console.log('Client closed connection. Aborting request to LLM service.');
-        response.data.destroy();
+        console.log('[PROXY] Client disconnected.');
+        response.data.destroy(); // Ensure the downstream request is terminated
       });
 
     } catch (error) {
-      // --- THIS IS THE CORRECTED BLOCK ---
-      // We check the type of the error before using it.
-      if (axios.isAxiosError(error)) {
-        console.error('Error proxying to llm-service:', error.message);
-      } else {
-        console.error('An unknown error occurred:', error);
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        errorMessage = error.message;
       }
-      res.write(`data: ${JSON.stringify({ error: 'AI service connection failed.' })}\n\n`);
+      console.error('[PROXY] FAILED to connect or proxy stream:', errorMessage);
+      const errorPayload = { event: 'error', payload: 'AI service connection failed.' };
+      res.write(`data: ${JSON.stringify(errorPayload)}\n\n`);
       res.end();
     }
   });

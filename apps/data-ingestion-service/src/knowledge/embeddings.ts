@@ -15,7 +15,7 @@ if (!GOOGLE_API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(GOOGLE_API_KEY);
-const EMBEDDING_MODEL_NAME = "embedding-001"; // Consistent with DB schema
+const EMBEDDING_MODEL_NAME = "text-embedding-004"; // Consistent with DB schema
 const embeddingModel = genAI.getGenerativeModel({ model: EMBEDDING_MODEL_NAME });
 
 const EMBEDDING_BATCH_SIZE = 100; // Max batch size for models/embedding-001
