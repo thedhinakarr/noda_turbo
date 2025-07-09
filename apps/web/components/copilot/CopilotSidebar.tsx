@@ -15,7 +15,7 @@ export default function CopilotSidebar({ isVisible }: { isVisible: boolean }) {
   };
 
   // Define the target width for the open state (e.g., w-96 = 24rem/384px)
-  const OPEN_WIDTH_CLASS = 'w-96'; // Increased width for the Copilot
+  const OPEN_WIDTH_CLASS = 'w-128'; // Increased width for the Copilot
 
   return (
     // Apply transition classes directly to the sidebar's main div.
