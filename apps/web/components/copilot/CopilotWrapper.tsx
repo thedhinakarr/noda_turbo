@@ -1,12 +1,19 @@
-// apps/web/components/copilot/CopilotWrapper.tsx
 "use client";
 
-import { useCopilot } from '@/context/CopilotContext';
-import CopilotSidebar from './CopilotSidebar'; // Ensure this path is correct
+import React from 'react';
+import CopilotSidebar from './CopilotSidebar';
 
-export default function CopilotWrapper() {
-  const { isCopilotOpen } = useCopilot();
-  
-  // Pass the state down as a prop named 'isVisible'
-  return <CopilotSidebar isVisible={isCopilotOpen} />;
-}
+/**
+ * A simple wrapper component for the Copilot UI.
+ * Its primary purpose is to provide a clean entry point for the Copilot feature.
+ * All state management is now handled by the useCopilotUiStore.
+ */
+const CopilotWrapper: React.FC = () => {
+  return (
+    <>
+      <CopilotSidebar />
+    </>
+  );
+};
+
+export default CopilotWrapper;

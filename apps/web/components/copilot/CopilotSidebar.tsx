@@ -1,54 +1,39 @@
-// apps/web/components/copilot/CopilotSidebar.tsx
 "use client";
 
 import React from 'react';
+import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 import { AICopilot } from '@/components/copilot/AICopilot';
-import { useCopilot } from '@/context/CopilotContext';
+import { useCopilotUiStore } from '@/lib/store/copilotStore';
 
-// Accept 'isVisible' prop to control its appearance
-export default function CopilotSidebar({ isVisible }: { isVisible: boolean }) {
-  const { setCopilotOpen } = useCopilot();
-
-  const handleCloseCopilot = () => {
-    setCopilotOpen(false);
-  };
-
-  // Define the target width for the open state (e.g., w-96 = 24rem/384px)
-  const OPEN_WIDTH_CLASS = 'w-128'; // Increased width for the Copilot
+export default function CopilotSidebar() {
+  const { isSidebarOpen, closeSidebar } = useCopilotUiStore();
 
   return (
-    // Apply transition classes directly to the sidebar's main div.
-    // When not visible, set width to w-0 and overflow-hidden for smooth transition.
-    <div
-      className={`
-        h-full bg-background-dark border-l border-border flex flex-col flex-shrink-0
-        transition-all duration-300 ease-in-out transform
-        ${isVisible ? OPEN_WIDTH_CLASS : 'w-0 overflow-hidden'}
-      `}
-    >
-      {/* Conditionally render content only when visible to prevent interaction with hidden elements */}
-      {/* This is crucial for performance and preventing layout shifts during transition */}
-      {isVisible && (
-        <>
-          {/* Header with Close Button */}
-          <div className="flex justify-between items-center p-3 border-b border-gray-700">
-            <h2 className="font-heading text-xl font-bold text-text-light">NODA CoPilot</h2>
-            <button
-              onClick={handleCloseCopilot}
-              className="p-2 rounded-full hover:bg-background-card text-text-secondary hover:text-text-primary transition-colors"
-              aria-label="Close Copilot"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* AICopilot Content Area */}
-          <div className="flex-1 overflow-y-auto p-4">
-            <AICopilot />
-          </div>
-        </>
+    <aside
+      className={cn(
+        // The vertical border on the main aside element remains.
+        "fixed top-0 right-0 h-full w-[400px] bg-background-darker shadow-2xl z-50 transition-transform duration-300 ease-in-out border-l border-border",
+        isSidebarOpen ? "translate-x-0" : "translate-x-full"
       )}
-    </div>
+    >
+      {/* FIX: The header now has a fixed height (h-16) to match the main dashboard header.
+        Padding is adjusted to px-4 to maintain horizontal space, while items-center handles vertical alignment.
+        This ensures the border-b aligns perfectly.
+      */}
+      <div className="h-16 px-4 flex justify-between items-center border-b border-border">
+        <h2 className="text-lg font-semibold text-text-light">Noda Copilot</h2>
+        <button
+          onClick={closeSidebar}
+          className="p-2 rounded-md hover:bg-background-light"
+        >
+          <X className="w-5 h-5 text-text-medium" />
+        </button>
+      </div>
+      {/* The height calculation for the content area is adjusted for the new fixed header height */}
+      <div className="p-4 h-[calc(100%-64px)]">
+        <AICopilot />
+      </div>
+    </aside>
   );
 }

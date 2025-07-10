@@ -1,5 +1,42 @@
 import { gql } from '@apollo/client';
 
+
+export const GET_OVERVIEW_DATA = gql`
+  query GetOverviewData {
+    overview {
+      buildings {
+        id
+        name
+        # --- NEW: Requesting location for map markers ---
+        location {
+          latitude
+          longitude
+        }
+        kpis {
+          efficiency
+        }
+        ranking {
+          overall
+        }
+        faults {
+          valve
+          transfer
+          smirch
+          primaryLoss
+          heatSystem
+        }
+      }
+      # --- NEW: Requesting weather data ---
+      weather {
+        timestamp
+        cloudiness
+        outdoorTemperature
+      }
+    }
+  }
+`;
+
+
 export const GET_ALL_DASHBOARD_DATA = gql`
   query GetAllDashboardData(
     $limit: Int

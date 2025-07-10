@@ -1,36 +1,43 @@
-import './globals.css';
-import { ApolloClientProvider } from './ApolloProviderWrapper';
-import AuthProvider from './AuthProvider';
+import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import { cn } from '@/lib/utils';
+import './globals.css';
+import AuthProvider from './AuthProvider';
+import { ApolloClientProvider } from './ApolloProviderWrapper';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
 
-const fontSans = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans',
-});
+const inter = Inter({ subsets: ['latin'] });
 
-export const metadata = {
-  title: 'NODA CoPilot Dashboard',
-  description: 'Monitoring and Optimization for Thermal Systems',
+export const metadata: Metadata = {
+  title: 'Noda Intelligence Platform',
+  description: 'The interface for the Noda thermal intelligence system.',
 };
 
-// This is the TRUE Root Layout. It is a simple shell.
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <body
-        className={cn(
-          "min-h-screen bg-background-dark font-sans text-text-primary antialiased",
-          fontSans.variable
-        )}
-      >
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Add the required Leaflet CSS for react-leaflet maps */}
+        <link
+          rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossOrigin=""
+        />
+      </head>
+      <body className={inter.className}>
         <AuthProvider>
           <ApolloClientProvider>
-            {children}
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              disableTransitionOnChange
+            >
+              {children}
+            </ThemeProvider>
           </ApolloClientProvider>
         </AuthProvider>
       </body>
