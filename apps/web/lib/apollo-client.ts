@@ -1,20 +1,38 @@
-// apps/web/lib/apollo-client.ts
+// FILE: apps/web/lib/apollo-client.ts
+// PURPOSE: To create an Apollo Client for use in CLIENT COMPONENTS ONLY (the browser).
+'use client';
+
+import { HttpLink } from "@apollo/client";
 import {
-  ApolloClient,
-  InMemoryCache,
-  HttpLink
-} from "@apollo/client";
+  NextSSRApolloClient,
+  NextSSRInMemoryCache,
+} from "@apollo/experimental-nextjs-app-support/ssr";
+import { setContext } from '@apollo/client/link/context';
+import { getSession } from "next-auth/react";
 
-// This HttpLink points to your Next.js API Route proxy.
-// This is all you need.
-const httpLink = new HttpLink({
-  uri: '/api/graphql',
-});
+import type { ApolloClient } from "@apollo/client";
 
-const client = new ApolloClient({
-  // Remove the authMiddleware, the proxy handles everything.
-  link: httpLink,
-  cache: new InMemoryCache(),
-});
+export function makeClient(): ApolloClient<any> {
+  const httpLink = new HttpLink({
+    uri: process.env.NEXT_PUBLIC_GRAPHQL_API_URL || '/api/graphql',
+  });
 
-export default client;
+  const authLink = setContext(async (_, { headers }) => {
+    const session = await getSession();
+    // FIX: Correctly access the accessToken from the root of the session object,
+    // as defined in your auth.ts callbacks.
+    const token = session?.accessToken;
+
+    return {
+      headers: {
+        ...headers,
+        authorization: token ? `Bearer ${token}` : '',
+      },
+    };
+  });
+
+  return new NextSSRApolloClient({
+    cache: new NextSSRInMemoryCache(),
+    link: authLink.concat(httpLink),
+  });
+}

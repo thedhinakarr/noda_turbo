@@ -1,3 +1,4 @@
+// FILE: apps/web/auth.ts
 import NextAuth from "next-auth";
 import MicrosoftEntraID from "@auth/core/providers/microsoft-entra-id";
 
@@ -8,11 +9,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     MicrosoftEntraID({
       clientId: clientId,
       clientSecret: process.env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
-      
-      // --- FIX: Use the 'common' tenant for multi-tenant login flows ---
-      // This allows users from any organization to sign in correctly.
-      tenantId: "common", 
-      
+      tenantId: "common",
       authorization: {
         params: {
           scope: `openid profile email offline_access api://${clientId}/access_as_user`,

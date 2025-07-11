@@ -1,7 +1,5 @@
-import { auth } from "@/auth"; // Use the new central auth file
+// FILE: apps/web/middleware.ts
+export { auth as middleware } from "@/auth";
 
-export default auth;
-
-export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
-};
+// Optionally, you can add a matcher to specify which routes are protected:
+export const config = { matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"] };
