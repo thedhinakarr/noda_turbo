@@ -1,50 +1,24 @@
-"use client";
-
-import React, { useEffect } from 'react';
-import NavigationSidebar from '@/components/layout/NavigationSidebar';
-import CopilotWrapper from '@/components/copilot/CopilotWrapper';
-import DashboardPageHeader from '@/components/dashboard/DashboardPageHeader';
-import { useSession } from "next-auth/react";
-import { useCopilotUiStore } from '@/lib/store/copilotStore';
-import { cn } from '@/lib/utils';
+// FILE: apps/web/app/(dashboard)/layout.tsx
+// PURPOSE: The final, correct layout that assembles the shell.
+import { NavigationSidebar } from '@/components/layout/NavigationSidebar';
+import { Header } from '@/components/layout/Header';
+import { CopilotSheet } from '@/components/copilot/CopilotSheet';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Get the state of the sidebar from our global store
-  const { isSidebarOpen } = useCopilotUiStore();
-
-  // This is the temporary code to log the session token for Postman testing.
-  const { data: session } = useSession();
-  useEffect(() => {
-    if (session) {
-      console.log("SESSION FOUND. Use this token for Postman:");
-      console.log(session.accessToken);
-    }
-  }, [session]);
-
   return (
-    <div className="flex h-screen bg-background-dark text-text-primary overflow-hidden">
+    <div className="flex min-h-screen w-full flex-col bg-muted/40">
       <NavigationSidebar />
-      {/* This is the main content area. We conditionally apply a right margin
-        to "push" it to the left when the Copilot sidebar is open.
-        The transition classes ensure this push is animated smoothly.
-      */}
-      <main
-        className={cn(
-          "flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out",
-          isSidebarOpen ? "mr-[400px]" : "mr-0"
-        )}
-      >
-        <DashboardPageHeader />
-        <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex flex-col sm:gap-4 sm:py-4 sm:pl-14">
+        <Header />
+        <main className="grid flex-1 items-start gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           {children}
-        </div>
-      </main>
-      {/* The CopilotWrapper renders the sidebar, which is a fixed element */}
-      <CopilotWrapper />
+        </main>
+      </div>
+      <CopilotSheet />
     </div>
   );
 }

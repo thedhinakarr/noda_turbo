@@ -1,44 +1,23 @@
-"use client";
+// FILE: apps/web/components/dashboard/DashboardPageHeader.tsx
+// PURPOSE: A new, reusable component to display the title and description for each page.
+'use client';
 
-import React from 'react';
-import { usePathname } from 'next/navigation';
-import { Bot } from 'lucide-react';
-import { useCopilotUiStore } from '@/lib/store/copilotStore';
-import { cn } from '@/lib/utils';
-// Import our new, clean ThemeToggle component
-import { ThemeToggle } from './ThemeToggle';
+interface DashboardPageHeaderProps {
+  title: string;
+  description?: string;
+  children?: React.ReactNode;
+}
 
-const DashboardPageHeader = () => {
-  const pathname = usePathname();
-  const { isSidebarOpen, toggleSidebar } = useCopilotUiStore();
-
-  const formatTitle = (path: string) => {
-    const title = path.split('/').pop() || 'overview';
-    if (title === 'dashboard' || title === '') return 'Overview';
-    return title.charAt(0).toUpperCase() + title.slice(1);
-  };
-
+export function DashboardPageHeader({ title, description, children }: DashboardPageHeaderProps) {
   return (
-    <header className="flex h-16 items-center justify-between p-4 border-b border-border flex-shrink-0">
-      <h1 className="text-2xl font-bold text-text-light">{formatTitle(pathname)}</h1>
-      <div className="flex items-center gap-x-2">
-        {/* Add the ThemeToggle component here */}
-        <ThemeToggle />
-        
-        {/* Copilot Toggle Button */}
-        <button
-          onClick={toggleSidebar}
-          className={cn(
-            "p-2 rounded-full transition-colors",
-            isSidebarOpen ? 'bg-brand-primary/10 text-brand-primary' : 'hover:bg-background-light'
-          )}
-          title="Toggle Noda Copilot"
-        >
-          <Bot className="w-6 h-6" />
-        </button>
+    <div className="flex items-center justify-between space-y-2 mb-6">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
+        {description && <p className="text-muted-foreground">{description}</p>}
       </div>
-    </header>
+      <div className="flex items-center space-x-2">
+        {children}
+      </div>
+    </div>
   );
-};
-
-export default DashboardPageHeader;
+}

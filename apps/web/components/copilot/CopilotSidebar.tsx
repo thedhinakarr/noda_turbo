@@ -1,39 +1,31 @@
-"use client";
+// FILE: apps/web/components/copilot/CopilotSidebar.tsx
+// PURPOSE: This component is now simpler. It is no longer a Sheet,
+// but a regular component that will be placed inside the new grid layout.
+'use client';
 
-import React from 'react';
-import { cn } from '@/lib/utils';
-import { X } from 'lucide-react';
-import { AICopilot } from '@/components/copilot/AICopilot';
-import { useCopilotUiStore } from '@/lib/store/copilotStore';
+import { AICopilot } from './AICopilot';
+import { Button } from '@/components/ui/button';
+import { Bot, X } from 'lucide-react';
+import { useCopilotStore } from '@/lib/store/copilotStore';
 
-export default function CopilotSidebar() {
-  const { isSidebarOpen, closeSidebar } = useCopilotUiStore();
-
+export function CopilotSidebar() {
+  const { toggleCopilot } = useCopilotStore();
+  
   return (
-    <aside
-      className={cn(
-        // The vertical border on the main aside element remains.
-        "fixed top-0 right-0 h-full w-[400px] bg-background-darker shadow-2xl z-50 transition-transform duration-300 ease-in-out border-l border-border",
-        isSidebarOpen ? "translate-x-0" : "translate-x-full"
-      )}
-    >
-      {/* FIX: The header now has a fixed height (h-16) to match the main dashboard header.
-        Padding is adjusted to px-4 to maintain horizontal space, while items-center handles vertical alignment.
-        This ensures the border-b aligns perfectly.
-      */}
-      <div className="h-16 px-4 flex justify-between items-center border-b border-border">
-        <h2 className="text-lg font-semibold text-text-light">Noda Copilot</h2>
-        <button
-          onClick={closeSidebar}
-          className="p-2 rounded-md hover:bg-background-light"
-        >
-          <X className="w-5 h-5 text-text-medium" />
-        </button>
+    <div className="flex h-full max-h-screen flex-col gap-2 border-l bg-muted/40">
+      <div className="flex h-14 items-center justify-between border-b px-4 lg:h-[60px] lg:px-6">
+        <div className="flex items-center gap-2 font-semibold">
+          <Bot className="h-6 w-6" />
+          <span className="">AI Copilot</span>
+        </div>
+        <Button variant="ghost" size="icon" onClick={toggleCopilot}>
+          <X className="h-4 w-4" />
+        </Button>
       </div>
-      {/* The height calculation for the content area is adjusted for the new fixed header height */}
-      <div className="p-4 h-[calc(100%-64px)]">
+      <div className="flex-1 overflow-auto p-4">
+        {/* The AICopilot component with the chat interface goes here */}
         <AICopilot />
       </div>
-    </aside>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import CopilotSidebar from './CopilotSidebar';
+import {CopilotSidebar} from './CopilotSidebar';
 
 /**
  * A simple wrapper component for the Copilot UI.

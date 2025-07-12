@@ -1,20 +1,15 @@
+// FILE: apps/web/lib/store/copilotStore.ts
+// PURPOSE: The global Zustand store to manage the Copilot's state.
 import { create } from 'zustand';
 
-// Defines the state and actions for the Copilot UI
-interface CopilotUiState {
-  isSidebarOpen: boolean;
-  openSidebar: () => void;
-  closeSidebar: () => void;
-  toggleSidebar: () => void;
+interface CopilotState {
+  isCopilotOpen: boolean;
+  setCopilotOpen: (isOpen: boolean) => void;
+  toggleCopilot: () => void;
 }
 
-/**
- * A Zustand store to manage the global state of the Copilot's UI,
- * such as the visibility of the sidebar.
- */
-export const useCopilotUiStore = create<CopilotUiState>((set) => ({
-  isSidebarOpen: false, // The sidebar is closed by default
-  openSidebar: () => set({ isSidebarOpen: true }),
-  closeSidebar: () => set({ isSidebarOpen: false }),
-  toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+export const useCopilotStore = create<CopilotState>((set) => ({
+  isCopilotOpen: false, // Default to closed
+  setCopilotOpen: (isOpen) => set({ isCopilotOpen: isOpen }),
+  toggleCopilot: () => set((state) => ({ isCopilotOpen: !state.isCopilotOpen })),
 }));

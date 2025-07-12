@@ -1,128 +1,33 @@
-// apps/graphql-api/src/graphql/schema.ts
-// REPLACED WITH THE COMPLETE SCHEMA INCLUDING assetType, assetStatus, assetActive
-
 import { gql } from 'graphql-tag';
 
 export const typeDefs = gql`
   # =================================================================
-  # Reusable Component Types
+  # CORE TYPES - Based on Database Tables
   # =================================================================
 
-  # A GeoJSON-like point for mapping coordinates.
-  type Location {
-    latitude: Float
-    longitude: Float
+  # Maps 1:1 to the 'buildings' table.
+  type Building {
+    uuid: ID!
+    name: String
+    asset_type: String
+    asset_status: String
+    asset_active: Boolean
+    asset_latitude: Float
+    asset_longitude: Float
+    created_at: String!
+    updated_at: String!
   }
 
-  # A simple type for a single data point in a time series chart.
-  type TimeSeriesDataPoint {
-    timestamp: String!
-    value: Float!
-  }
-
-  # =================================================================
-  # System Summary Types (For Chatbot & System Cards)
-  # =================================================================
-
-  # Groups all ranking-related metrics together.
-  type Ranking {
-    overall: Float
-    network: Float
-    customer: Float
-  }
-
-  # Groups all fault-related flags. This is a perfect target for a "Faults" UI card.
-  type Faults {
-    primaryLoss: Float
-    smirch: Float
-    heatSystem: Float
-    valve: Float
-    transfer: Float
-  }
-
-  # Groups key performance indicators for a system.
-  type KeyPerformanceIndicators {
-    mostWanted: Float
-    efficiency: Float
-    efficiencySrd: Float
-    ntu: Float
-    ntuSrd: Float
-    lmtd: Float
-  }
-
-  # Groups all temperature-related metrics.
-  type TemperatureMetrics {
-    deltaAbsolute: Float
-    deltaVolumeWeighted: Float
-    deltaIdeal: Float
-    deltaTrend: Float
-    deltaSrd: Float
-    returnAbsolute: Float
-    returnVolumeWeighted: Float
-    returnTrend: Float
-    returnSrd: Float
-    returnFlex: Float
-    supplyAbsolute: Float
-    supplyFlex: Float
-  }
-
-  # Groups all demand-related metrics.
-  type DemandMetrics {
-    signal: Float
-    flex: Float
-    k: Float
-    max: Float
-    dimensional: Float
-  }
-
-  # The primary entity, composed of logical sub-types for summary views.
-  type System {
-    id: ID! # Maps to buildings.uuid for consistent ID
-    uuid: String! # Maps to buildings.uuid
-    name: String # Maps to buildings.name
-    location: Location # Derived from buildings.asset_latitude, buildings.asset_longitude
-    timePeriod: String # Derived from dashboard_data.time_period (latest)
-    customerGroup: String # Derived from dashboard_data.customer_group (latest)
-    geoGroup: String # Derived from dashboard_data.geo_group (latest)
-    typeGroup: String # Derived from dashboard_data.type_group (latest)
-    genericGroup: String # Derived from dashboard_data.generic_group (latest)
-    
-    # NEW FIELDS: Directly from buildings table
-    assetType: String # Maps to buildings.asset_type
-    assetStatus: String # Maps to buildings.asset_status (e.g., "optimal", "warning", "alert")
-    assetActive: Boolean # Maps to buildings.asset_active (boolean conversion if needed)
-
-    kpis: KeyPerformanceIndicators # Derived from dashboard_data
-    ranking: Ranking # Derived from dashboard_data
-    faults: Faults # Derived from dashboard_data
-    demand: DemandMetrics # Derived from dashboard_data
-    temperature: TemperatureMetrics # Derived from dashboard_data
-  }
-
-  # The paginated response for a list of systems.
-  type SystemResponse {
-    systems: [System!]!
-    totalCount: Int!
-  }
-
-  # =================================================================
-  # Page-Specific Types
-  # =================================================================
-
-  # --- For Overview Page ---
+  # Maps 1:1 to the 'weather_data' table.
   type WeatherData {
-    timestamp: String
+    id: ID!
+    asset_name: String
+    time_period: String!
     cloudiness: Float
-    outdoorTemperature: Float
-  }
-  type OverviewData {
-    buildings: [System!]!
-    weather: [WeatherData!]
+    outdoor_temperature: Float
   }
 
-  # --- For Retrospect Page ---
-  # Represents a single, granular row from the dashboard_data table.
-  # This is now fully expanded for testing.
+  # COMPLETE: Maps 1:1 to the 'dashboard_data' table for the Retrospect page.
   type RetrospectDataPoint {
     id: ID!
     uuid: String!
@@ -214,10 +119,10 @@ export const typeDefs = gql`
     eff_pos: Float
   }
 
-  # --- For Building Page ---
-  # This is now fully expanded for testing.
+  # COMPLETE: Maps 1:1 to the 'monthly_metrics' table for the Building page.
   type MonthlyMetric {
     id: ID!
+    building_uuid: String!
     time_period: String!
     building_impact: Float
     saving_kwh: Float
@@ -231,9 +136,10 @@ export const typeDefs = gql`
     idt_wanted: Float
   }
 
-  # --- For Demand Page ---
+  # COMPLETE: Maps 1:1 to the 'daily_metrics' table for the Demand page.
   type DailyMetric {
     id: ID!
+    building_uuid: String!
     time_period: String!
     demand: Float
     flow: Float
@@ -242,25 +148,47 @@ export const typeDefs = gql`
     ctrl_activity: Float
   }
 
-
-  # =================================================================
-  # Main Query and Subscription Types
-  # =================================================================
-
-  type Query {
-    # --- General Purpose Queries (For Chatbot, etc.) ---
-    systems(limit: Int, offset: Int, status: String, searchTerm: String): SystemResponse
-    system(uuid: String!): System
-    systemMetricOverTime(uuid: String!, metric: String!): [TimeSeriesDataPoint!]
-
-    # --- Page-Specific Queries ---
-    overview: OverviewData
-    retrospectData(uuid: String!, startDate: String, endDate: String): [RetrospectDataPoint!]
-    monthlyMetrics(uuid: String!, startDate: String, endDate: String): [MonthlyMetric!]
-    dailyMetrics(uuid: String!, startDate: String, endDate: String): [DailyMetric!]
+  # Wrapper for the Overview page response.
+  type OverviewData {
+    buildings: [Building!]!
+    weather: [WeatherData!]!
   }
 
-  type Subscription {
-    systemUpdated: System
+  # =================================================================
+  # INPUT TYPES for Filtering
+  # =================================================================
+  input SystemPropertyFilter {
+    uuids: [String!]
+    nameContains: String
+    assetType: String
+    assetStatus: String
+    assetActive: Boolean
+  }
+
+  input DateRangeFilter {
+    startDate: String!
+    endDate: String!
+  }
+
+  # =================================================================
+  # THE FINAL QUERY API
+  # =================================================================
+  type Query {
+    overview: OverviewData
+
+    retrospectData(
+      systemFilter: SystemPropertyFilter
+      dateFilter: DateRangeFilter
+    ): [RetrospectDataPoint!]
+
+    dailyMetrics(
+      systemFilter: SystemPropertyFilter
+      dateFilter: DateRangeFilter
+    ): [DailyMetric!]
+      
+    monthlyMetrics(
+      systemFilter: SystemPropertyFilter
+      dateFilter: DateRangeFilter
+    ): [MonthlyMetric!]
   }
 `;

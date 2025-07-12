@@ -1,15 +1,15 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import './globals.css';
-import AuthProvider from './AuthProvider';
-import { ApolloClientProvider } from './ApolloProviderWrapper';
+import { ApolloProviderWrapper } from './ApolloProviderWrapper';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import AuthProvider from './AuthProvider'; // <-- 1. IMPORT the AuthProvider
+import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Noda Intelligence Platform',
-  description: 'The interface for the Noda thermal intelligence system.',
+  title: 'NODA Systems Dashboard',
+  description: 'System monitoring and analytics.',
 };
 
 export default function RootLayout({
@@ -19,26 +19,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* Add the required Leaflet CSS for react-leaflet maps */}
-        <link
-          rel="stylesheet"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossOrigin=""
-        />
-      </head>
       <body className={inter.className}>
+        {/* 2. WRAP everything with AuthProvider */}
         <AuthProvider>
-          <ApolloClientProvider>
-            <ThemeProvider
-              attribute="class"
-              defaultTheme="dark"
-              disableTransitionOnChange
-            >
-              {children}
-            </ThemeProvider>
-          </ApolloClientProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <ApolloProviderWrapper>{children}</ApolloProviderWrapper>
+          </ThemeProvider>
         </AuthProvider>
       </body>
     </html>

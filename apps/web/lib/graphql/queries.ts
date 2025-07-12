@@ -1,107 +1,25 @@
 import { gql } from '@apollo/client';
 
-
-export const GET_OVERVIEW_DATA = gql`
-  query GetOverviewData {
+export const GET_OVERVIEW_PAGE_DATA = gql`
+  query GetOverviewPage {
     overview {
       buildings {
-        id
-        name
-        # --- NEW: Requesting location for map markers ---
-        location {
-          latitude
-          longitude
-        }
-        kpis {
-          efficiency
-        }
-        ranking {
-          overall
-        }
-        faults {
-          valve
-          transfer
-          smirch
-          primaryLoss
-          heatSystem
-        }
-      }
-      # --- NEW: Requesting weather data ---
-      weather {
-        timestamp
-        cloudiness
-        outdoorTemperature
-      }
-    }
-  }
-`;
-
-
-export const GET_ALL_DASHBOARD_DATA = gql`
-  query GetAllDashboardData(
-    $limit: Int
-    $offset: Int
-    $status: String
-    $searchTerm: String
-  ) {
-    allDashboardData(
-      limit: $limit
-      offset: $offset
-      status: $status
-      searchTerm: $searchTerm
-    ) {
-      totalCount
-      systems {
-        id
-        building_control
-        property_meter
-        customer_group
-        geo_group
-        type_group
-        generic_group
         uuid
+        name
+        asset_type
+        asset_status
+        asset_active
         asset_latitude
         asset_longitude
+        created_at
+        updated_at
+      }
+      weather {
+        id
+        asset_name
         time_period
-        most_wanted
-        rank_overall
-        rank_network
-        rank_customer
-        overflow_abs
-        overflow_rel
-        overflow_spec
-        energy_abs
-        volume_abs
-        volume_spec
-        volume_trend
-        flow_dim
-        demand_sig
-        demand_flex
-        demand_k
-        demand_max
-        demand_dim
-        dt_abs
-        dt_vw
-        dt_ideal
-        dt_trend
-        dt_srd
-        rt_abs
-        rt_vw
-        rt_trend
-        rt_srd
-        rt_flex
-        ntu
-        ntu_srd
-        lmtd
-        efficiency
-        efficiency_srd
-        supply_abs
-        supply_flex
-        fault_prim_loss
-        fault_smirch
-        fault_heat_sys
-        fault_valve
-        fault_transfer
+        cloudiness
+        outdoor_temperature
       }
     }
   }
