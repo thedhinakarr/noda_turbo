@@ -1,26 +1,19 @@
 // FILE: apps/web/components/layout/Header.tsx
-// PURPOSE: A new, clean header that sits above the main content.
+// PURPOSE: To reduce the top margin for a more balanced look.
 'use client';
 
 import Link from 'next/link';
-import { Search, Menu, Bot, MessageSquare } from 'lucide-react';
+import { Menu, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { ThemeToggle } from '../dashboard/ThemeToggle';
 import { useCopilotStore } from '@/lib/store/copilotStore';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { usePathname } from 'next/navigation';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-
 
 export function Header() {
   const { toggleCopilot } = useCopilotStore();
@@ -29,7 +22,8 @@ export function Header() {
   const capitalizedTitle = pageTitle.charAt(0).toUpperCase() + pageTitle.slice(1);
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
+    // THE CHANGE IS HERE: Reduced margin from `sm:mt-8` to `sm:mt-4`.
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 sm:mt-4">
       <Sheet>
         <SheetTrigger asChild>
           <Button size="icon" variant="outline" className="sm:hidden">
@@ -38,7 +32,7 @@ export function Header() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="sm:max-w-xs">
-          {/* Mobile navigation can be added here */}
+          {/* Mobile navigation content would go here */}
         </SheetContent>
       </Sheet>
       
@@ -59,10 +53,9 @@ export function Header() {
       <div className="relative ml-auto flex items-center gap-4 md:grow-0">
         <ThemeToggle />
         <Button variant="outline" size="icon" onClick={toggleCopilot}>
-            <MessageSquare className="w-5 h-5" />
-            <span className="sr-only">Toggle AI Copilot</span>
+          <MessageSquare className="w-5 h-5" />
+          <span className="sr-only">Toggle AI Copilot</span>
         </Button>
-       
       </div>
     </header>
   );

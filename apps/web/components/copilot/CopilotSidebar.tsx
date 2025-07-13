@@ -1,6 +1,5 @@
 // FILE: apps/web/components/copilot/CopilotSidebar.tsx
-// PURPOSE: This component is now simpler. It is no longer a Sheet,
-// but a regular component that will be placed inside the new grid layout.
+// PURPOSE: Simplified sidebar content with a close button connected to the store.
 'use client';
 
 import { AICopilot } from './AICopilot';
@@ -12,18 +11,18 @@ export function CopilotSidebar() {
   const { toggleCopilot } = useCopilotStore();
   
   return (
-    <div className="flex h-full max-h-screen flex-col gap-2 border-l bg-muted/40">
+    <div className="flex h-full max-h-screen flex-col gap-2 border-l bg-background shadow-lg">
       <div className="flex h-14 items-center justify-between border-b px-4 lg:h-[60px] lg:px-6">
-        <div className="flex items-center gap-2 font-semibold">
+        <div className="flex items-center gap-2 font-semibold text-foreground">
           <Bot className="h-6 w-6" />
-          <span className="">AI Copilot</span>
+          <span className="">Copilot</span>
         </div>
-        <Button variant="ghost" size="icon" onClick={toggleCopilot}>
+        <Button variant="ghost" size="icon" onClick={toggleCopilot} className="hover:bg-accent">
           <X className="h-4 w-4" />
+          <span className="sr-only">Close Copilot</span>
         </Button>
       </div>
       <div className="flex-1 overflow-auto p-4">
-        {/* The AICopilot component with the chat interface goes here */}
         <AICopilot />
       </div>
     </div>

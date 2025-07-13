@@ -1,5 +1,5 @@
 // FILE: apps/web/components/layout/NavigationSidebar.tsx
-// PURPOSE: A complete rewrite to precisely match the user's preferred screenshot.
+// PURPOSE: A rewrite to integrate correctly with the flexbox layout.
 'use client';
 
 import Link from 'next/link';
@@ -18,10 +18,7 @@ import {
   LineChart,
   Building,
   BarChartHorizontal,
-  Folder,
-  Users
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export function NavigationSidebar() {
   const pathname = usePathname();
@@ -31,11 +28,12 @@ export function NavigationSidebar() {
     { href: '/retrospect', label: 'Retrospect', icon: LineChart, active: pathname === '/retrospect' },
     { href: '/building', label: 'Building', icon: Building, active: pathname === '/building' },
     { href: '/demand', label: 'Demand', icon: BarChartHorizontal, active: pathname === '/demand' },
-
   ];
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
+    // THE ONLY CHANGE IS IN THIS LINE:
+    // The "fixed", "inset-y-0", "left-0", and "z-10" classes have been REMOVED.
+    <aside className="hidden w-14 flex-col border-r bg-background sm:flex">
       <TooltipProvider>
         <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
           <Link

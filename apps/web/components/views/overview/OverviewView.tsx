@@ -1,12 +1,11 @@
 // FILE: apps/web/components/views/overview/OverviewView.tsx
-// UPDATED FILE: The main view component with the new map-centric layout.
+// UPDATED FILE: Now uses the new, simpler, and more reliable chart.
 'use client';
 
 import { useQuery } from '@apollo/client';
 import { GET_OVERVIEW_PAGE_DATA } from '@/lib/graphql/queries';
 import type { OverviewPageData, Building } from '@/lib/graphql/types';
 import { useMemo } from 'react';
-import { format, isValid } from "date-fns";
 import dynamic from 'next/dynamic';
 
 // Import shadcn/ui components
@@ -15,27 +14,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Import Recharts components for charting
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-
 // Import Lucide React icons
-import { Building as BuildingIcon, Thermometer, Cloud, Activity } from 'lucide-react';
+import { Building as BuildingIcon, Activity } from 'lucide-react';
+// Import the new simple chart
+import { WeatherTrendSimpleChart } from './WeatherTrendSimpleChart';
 
-// Dynamically import the map component to ensure it only runs on the client side
 const SystemsMap = dynamic(() => import('./SystemsMap').then(mod => mod.SystemsMap), {
   ssr: false,
   loading: () => <Skeleton className="w-full h-full" />,
 });
 
-
 // --- Main View Component ---
 export function OverviewView() {
   const { loading, error, data } = useQuery<OverviewPageData>(GET_OVERVIEW_PAGE_DATA);
 
-  // Memoize processed data to prevent re-calculation on every render
-  const { buildings, kpiData, weatherChartData } = useMemo(() => {
+  const { buildings, kpiData, weatherData } = useMemo(() => {
     const buildings = data?.overview?.buildings ?? [];
-    const weather = data?.overview?.weather ?? [];
+    const weatherData = data?.overview?.weather ?? [];
 
     const kpiData = {
       total: buildings.length,
@@ -43,21 +38,8 @@ export function OverviewView() {
       optimal: buildings.filter(b => b.asset_status === 'optimal').length,
       alerts: buildings.filter(b => b.asset_status === 'alert').length,
     };
-
-    const weatherChartData = weather
-      .map(w => {
-        const date = new Date(w.time_period);
-        if (!isValid(date)) return null;
-        return {
-          time: format(date, 'MMM dd'),
-          temperature: w.outdoor_temperature,
-        };
-      })
-      .filter((item): item is { time: string; temperature: number | null } => item !== null)
-      .slice()
-      .reverse();
-
-    return { buildings, kpiData, weatherChartData };
+    
+    return { buildings, kpiData, weatherData };
   }, [data]);
 
   if (loading) {
@@ -104,16 +86,18 @@ export function OverviewView() {
           <RecentBuildingsTable buildings={buildings} />
         </div>
         <div>
-          <WeatherLineChart data={weatherChartData} />
+          {/* USE THE NEW, SIMPLER CHART */}
+          <WeatherTrendSimpleChart data={weatherData} />
         </div>
       </div>
     </div>
   );
 }
 
-// --- Child Components ---
+// --- Child Components (These remain unchanged) ---
 
 function KPICard({ title, value, icon: Icon }: { title: string; value: string; icon: React.ElementType }) {
+  // ... (no changes needed)
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
@@ -127,37 +111,8 @@ function KPICard({ title, value, icon: Icon }: { title: string; value: string; i
   );
 }
 
-function WeatherLineChart({ data }: { data: { time: string; temperature: number | null }[] }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Temperature Trend</CardTitle>
-        <CardDescription>Recent outdoor temperature readings.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <AreaChart data={data}>
-            <defs>
-              <linearGradient id="colorTemperature" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-brand-accent)" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="var(--color-brand-accent)" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <XAxis dataKey="time" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-            <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}°C`} />
-            <Tooltip
-              cursor={{ stroke: 'var(--color-brand-primary)', strokeWidth: 1, strokeDasharray: '3 3' }}
-              contentStyle={{ background: "hsl(var(--background))", borderColor: "hsl(var(--border))" }}
-            />
-            <Area type="monotone" dataKey="temperature" stroke="var(--color-brand-primary)" fillOpacity={1} fill="url(#colorTemperature)" />
-          </AreaChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
-  );
-}
-
 function RecentBuildingsTable({ buildings }: { buildings: Building[] }) {
+  // ... (no changes needed)
   return (
     <Card>
       <CardHeader>
@@ -171,7 +126,6 @@ function RecentBuildingsTable({ buildings }: { buildings: Building[] }) {
               <TableHead>Name</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Type</TableHead>
-           
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -194,6 +148,7 @@ function RecentBuildingsTable({ buildings }: { buildings: Building[] }) {
 }
 
 function OverviewSkeleton() {
+  // ... (no changes needed)
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
