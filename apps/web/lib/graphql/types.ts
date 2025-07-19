@@ -27,3 +27,34 @@ export interface OverviewPageData {
     weather: WeatherData[];
   };
 }
+
+// Add this new interface to your types.ts file
+
+export interface RetrospectDataPoint {
+    __typename?: 'RetrospectDataPoint';
+    id: string;
+    uuid: string;
+    building_control?: string | null;
+    time_period: string;
+    most_wanted?: number | null;
+    efficiency?: number | null;
+    overflow_abs?: number | null;
+    fault_prim_loss?: number | null;
+    fault_smirch?: number | null;
+    fault_heat_sys?: number | null;
+    fault_valve?: number | null;
+    fault_transfer?: number | null;
+    dt_abs?: number | null;
+    dt_vw?: number | null;
+    dt_ideal?: number | null;
+    rt_abs?: number | null;
+    rt_vw?: number | null;
+    demand_sig?: number | null;
+    demand_flex?: number | null;
+    volume_abs?: number | null;
+    ntu?: number | null;
+    lmtd?: number | null;
+    supply_abs?: number | null;
+    data_quality_missing_odt?: number | null;
+    data_quality_outlier_odt?: number | null;
+}

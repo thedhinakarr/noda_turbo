@@ -1,3 +1,5 @@
+// apps/graphql-api/src/graphql/schema.ts
+
 import { gql } from 'graphql-tag';
 
 export const typeDefs = gql`
@@ -31,6 +33,7 @@ export const typeDefs = gql`
   type RetrospectDataPoint {
     id: ID!
     uuid: String!
+    # ... all other RetrospectDataPoint fields remain the same
     building_control: String
     property_meter: String
     customer_group: String
@@ -125,6 +128,7 @@ export const typeDefs = gql`
     building_uuid: String!
     time_period: String!
     building_impact: Float
+    # ... all other MonthlyMetric fields remain the same
     saving_kwh: Float
     saving_energy_perc: Float
     saving_energy_sek: Float
@@ -185,10 +189,22 @@ export const typeDefs = gql`
       systemFilter: SystemPropertyFilter
       dateFilter: DateRangeFilter
     ): [DailyMetric!]
-      
+    
     monthlyMetrics(
       systemFilter: SystemPropertyFilter
       dateFilter: DateRangeFilter
     ): [MonthlyMetric!]
+  }
+
+  # ADDED: This Input type defines the structure for chat history messages.
+  input ChatMessageInput {
+    role: String!
+    content: String!
+  }
+
+  # ADDED: This entire Mutation block is new. It allows you to send questions
+  # to the AI copilot without affecting your existing data queries.
+  type Mutation {
+    analyse(question: String!, history: [ChatMessageInput]): String
   }
 `;

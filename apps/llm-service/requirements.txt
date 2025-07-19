@@ -1,0 +1,28 @@
+# --- Core AI & MCP Framework ---
+mcp[cli]
+google-generativeai
+fastmcp
+
+# --- Vanna.ai and its Dependencies ---
+vanna
+google-cloud-aiplatform
+chromadb
+openai
+
+# --- Database & RAG ---
+psycopg2-binary
+pgvector
+sentence-transformers
+
+# --- PDF & Charting ---
+fpdf2
+matplotlib
+
+# --- LangChain ---
+langchain
+langchain-core
+langchain-community
+langchain-google-genai
+
+# --- Utilities ---
+python-dotenv

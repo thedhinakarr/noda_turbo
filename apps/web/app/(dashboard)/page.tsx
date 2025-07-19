@@ -6,7 +6,7 @@ import { Suspense } from 'react';
 import { getClient } from '@/lib/apollo-rsc';
 import { GET_OVERVIEW_PAGE_DATA } from '@/lib/graphql/queries';
 import { OverviewView } from '@/components/views/overview/OverviewView';
-import  OverviewSkeleton  from '@/components/views/overview/OverviewView';
+import  {OverviewSkeleton}  from '@/components/views/overview/OverviewView';
 
 
 export default async function OverviewPage() {

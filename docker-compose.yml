@@ -1,5 +1,7 @@
+# docker-compose.yml
+
 services:
-  # --- Application Services ---
+  # --- Infrastructure Services ---
   db:
     image: pgvector/pgvector:pg16
     container_name: noda_turbo_postgres
@@ -11,7 +13,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes: [ "db_data:/var/lib/postgresql/data" ]
     networks:
-      - noda_network # Assign to our custom network
+      - noda_network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 5s
@@ -25,13 +27,14 @@ services:
     ports: [ "6379:6379" ]
     volumes: [ "redis_data:/data" ]
     networks:
-      - noda_network # Assign to our custom network
+      - noda_network
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 3s
       retries: 5
 
+  # --- Application Services ---
   ingestor:
     build:
       context: .
@@ -48,7 +51,36 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY}
     volumes: [ "./apps/data-ingestion-service/data:/app/apps/data-ingestion-service/data" ]
     networks:
-      - noda_network # Assign to our custom network
+      - noda_network
+
+  llm-service:
+    build:
+      context: .
+      dockerfile: ./apps/llm-service/Dockerfile
+    container_name: noda_turbo_llm_service
+    restart: always
+    ports:
+      - "5001:5001" 
+    env_file:
+      - .env
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      # MODIFIED: Pass individual DB components for Vanna
+      DB_HOST: "db"
+      DB_PORT: "5432"
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      VANNA_API_KEY: ${VANNA_API_KEY} # Add Vanna key (can be empty for self-hosting)
+    volumes:
+      - ./apps/llm-service/reports:/app/reports # Mount a volume for PDF reports
+      - ./apps/llm-service/tmp:/tmp # Mount a volume for temporary chart images
+    networks:
+      - noda_network
+    # MODIFIED: Healthcheck removed as MCP server doesn't have a standard HTTP health endpoint
+
   graphql-api:
     build:
       context: .
@@ -61,39 +93,15 @@ services:
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
-      llm-service: { condition: service_healthy } # MODIFIED: This is now active
+      llm-service:
+        condition: service_started # MODIFIED: Wait for the service to start, not become healthy
     environment:
       DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
       REDIS_URL: "redis://redis:6379"
-      LLM_SERVICE_URL: "http://llm-service:5001" # This URL is correct
+      LLM_SERVICE_URL: "http://llm-service:5001" # MODIFIED: Port changed to 8000
       PORT: 4000
     networks:
-      - noda_network # Assign to our custom network
-  llm-service:
-    # MODIFIED: Moved llm-service before graphql-api for clarity
-    build:
-      context: .
-      dockerfile: ./apps/llm-service/Dockerfile
-    container_name: noda_turbo_llm_service
-    restart: always
-    ports:
-      - "5001:5001"
-    env_file:
-      - .env
-    depends_on:
-      db: { condition: service_healthy }
-    environment:
-      DATABASE_URL: "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}"
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
-      PORT: 5001
-    networks:
-      - noda_network # Assign to our custom network
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:5001/health" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
+      - noda_network
 
   docs:
     build:
@@ -104,15 +112,14 @@ services:
     ports: [ "3002:3000" ]
     volumes: [ "./apps/docs:/book" ]
     networks:
-      - noda_network # Assign to our custom network
+      - noda_network
 
 # Named volumes for persistent data storage
 volumes:
   db_data:
   redis_data:
 
-    # Define the network for all services to communicate
+# Define the network for all services to communicate
 networks:
   noda_network:
-    # MODIFIED: The network name matches what's used above
     name: noda_network
