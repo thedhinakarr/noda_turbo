@@ -1,9 +1,0 @@
-{
-  "name": "llm-service",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "dev": "echo 'Use docker-compose up to run the dev environment'",
-    "lint": "docker run --rm -v $(pwd):/app -w /app your-registry/llm-service poetry run ruff check ."
-  }
-}

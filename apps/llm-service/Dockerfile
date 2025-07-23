@@ -1,30 +1,24 @@
-# apps/llm-service/Dockerfile
+# File: apps/llm-service/Dockerfile
 
-# Use a specific version for reproducibility
-FROM python:3.11.9-slim
+FROM python:3.10-slim
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# Install uv, the fast Python package installer
+RUN pip install uv
 
-# Install Poetry separately to ensure it's available
-RUN pip install --no-cache-dir poetry
+# Copy the requirements file first to leverage Docker layer caching
+COPY ./apps/llm-service/requirements.txt .
 
-# --- Dependency Installation Layer ---
-# This is the most critical part. We copy ONLY the dependency files first.
-# Docker will cache this layer and only re-run it if pyproject.toml changes.
-COPY apps/llm-service/pyproject.toml ./
+# Install dependencies using uv
+# CORRECTED: Added the --system flag to install packages into the global environment
+RUN uv pip install --system --no-cache -r requirements.txt
 
-# Install dependencies using Poetry.
-# This command tells Poetry to find pyproject.toml in the current directory (`/app`) and install.
-RUN poetry install --no-interaction --no-ansi --no-root
+# Copy the application source code
+COPY ./apps/llm-service/main.py .
 
-# --- Application Code Layer ---
-# Now, copy all the application code, including your `src` directory
-# and the `train_vanna.py` script.
-COPY apps/llm-service/ .
+# Expose the port the app runs on
+EXPOSE 5001
 
-# The command to run your application
-CMD ["poetry", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "5001"]
+# Run the application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5001"]

@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-dotenv
+asyncpg
+llama-index-core
+fastmcp
+llama-index-core
+llama-index-llms-google-genai
+llama-index-embeddings-google-genai
