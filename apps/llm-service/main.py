@@ -1,7 +1,7 @@
 import functools
 from typing import Any, Type, List
 from contextlib import asynccontextmanager
-
+from pydantic import BaseModel, create_model, Field 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, create_model
@@ -10,6 +10,7 @@ from llama_index.core.agent import ReActAgent
 from llama_index.llms.google_genai import GoogleGenAI
 from fastmcp.client import Client
 from dotenv import load_dotenv
+from llama_index.core.memory import ChatMemoryBuffer
 import os
 import json 
 
@@ -28,6 +29,9 @@ TOOL_SERVERS = {
 
 # --- Agent State ---
 agent: ReActAgent = None
+llm = None
+all_tools = []
+session_agents = {}
 
 # --- System Prompt Engineering ---
 AGENT_SYSTEM_PROMPT = """
@@ -109,27 +113,18 @@ async def discover_tools() -> List[FunctionTool]:
     print(f"Tool discovery complete. Total tools found: {len(discovered_tools)}")
     return discovered_tools
 
-# --- Application Lifespan ---
+# --- CORRECTED: Application Lifespan ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initializes the agent when the application starts."""
-    global agent
-    print("Agent is initializing...")
+    """Initializes the shared LLM and discovers tools at startup."""
+    global llm, all_tools
+    print("Agent Service: Lifespan startup...")
+    llm = GoogleGenAI(model="gemini-1.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
     all_tools = await discover_tools()
-    if not all_tools:
-        print("WARNING: No tools were discovered. Agent will have limited capabilities.")
-    
-    llm = GoogleGenAI(model="gemini-2.5-flash", api_key=os.getenv("GEMINI_API_KEY"))
-    agent = ReActAgent.from_tools(
-    all_tools,
-    llm=llm,
-    verbose=True,
-    system_prompt=AGENT_SYSTEM_PROMPT,
-    max_iterations=20  # <-- ADD THIS LINE
-)
-    print("Agent is ready.")
+    print(f"Agent Service: Lifespan ready. Discovered {len(all_tools)} tools.")
     yield
-    print("Agent is shutting down.")
+    print("Agent Service: Lifespan shutdown.")
+# ---------------------------------------------
 
 # --- FastAPI Application ---
 app = FastAPI(title="LLM Agent Service", description="The central brain for the Noda application.", lifespan=lifespan)
@@ -138,9 +133,10 @@ app = FastAPI(title="LLM Agent Service", description="The central brain for the 
 os.makedirs(REPORTS_DIR, exist_ok=True)
 app.mount("/reports", StaticFiles(directory=REPORTS_DIR), name="reports")
 
-# --- API Models ---
+# --- CORRECTED: API Models ---
 class ChatRequest(BaseModel):
     message: str
+    session_id: str = Field(..., description="A unique ID for the conversation session.")
 
 class UiAction(BaseModel):
     action: str
@@ -150,24 +146,58 @@ class UiAction(BaseModel):
 class AgentResponse(BaseModel):
     text: str
     ui_actions: List[UiAction]
+# ---------------------------------
 
 # --- API Endpoint ---
 @app.post("/chat", response_model=AgentResponse)
 async def chat(request: ChatRequest):
-    """Receives a user message, gets a response from the agent, and returns it in the structured format."""
-    if not agent:
+    """Receives a user message, manages the conversational agent, and returns a response."""
+    global session_agents, llm, all_tools
+
+    if not llm or not all_tools:
         return AgentResponse(text="Agent is not ready. Please try again in a moment.", ui_actions=[])
 
-    print(f"Received chat request: {request.message}")
-    response = await agent.achat(request.message)
-    response_text = str(response)
+    # --- SESSION AND MEMORY MANAGEMENT ---
+    # Get the agent for this specific session, or create a new one if it's the first message.
+    if request.session_id not in session_agents:
+        print(f"Creating new agent and memory for session: {request.session_id}")
+        
+        # Create a new memory buffer for this conversation
+        memory = ChatMemoryBuffer.from_defaults(token_limit=8192)
+        
+        # Create a new agent instance, giving it its own dedicated memory
+        agent = ReActAgent.from_tools(
+            tools=all_tools,
+            llm=llm,
+            memory=memory,
+            system_prompt=AGENT_SYSTEM_PROMPT,
+            verbose=True,
+            max_iterations=20
+        )
+        session_agents[request.session_id] = agent
+    else:
+        print(f"Using existing agent for session: {request.session_id}")
+        agent = session_agents[request.session_id]
+    # ------------------------------------
+
+    print(f"Received chat request for session {request.session_id}: {request.message}")
     
     try:
+        response = await agent.achat(request.message)
+        response_text = str(response)
+
         if response_text.startswith("```json"):
             response_text = response_text.strip("```json").strip("`").strip()
         
         data = json.loads(response_text)
         return AgentResponse(**data)
+        
     except (json.JSONDecodeError, TypeError):
         print(f"Warning: Agent did not return valid JSON. Response: {response_text}")
         return AgentResponse(text=response_text, ui_actions=[])
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        # Reset the agent's memory on error to prevent it from getting stuck
+        agent.reset()
+        return AgentResponse(text=f"I'm sorry, an error occurred: {e}", ui_actions=[])
+

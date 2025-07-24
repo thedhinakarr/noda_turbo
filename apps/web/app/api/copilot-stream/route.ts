@@ -1,70 +1,45 @@
-// apps/web/app/api/copilot-stream/route.ts
+import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
 
-// Optional: Use the Edge Runtime for faster cold starts and efficient streaming.
-export const runtime = 'edge'; 
+// Remove: export const runtime = 'edge';
 
 export async function POST(req: Request) {
   try {
-    // 1. Get the user's message from the request body sent by the frontend
-    const { question } = await req.json(); 
-
-    if (!question || typeof question !== 'string') {
-      return new Response(JSON.stringify({ error: 'Question is required and must be a string' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // --- 2. Call your actual backend endpoint ---
-    const BACKEND_COPILOT_ENDPOINT = process.env.BACKEND_COPILOT_ENDPOINT || 'http://localhost:4000/api/copilot-stream';
-    const BACKEND_API_TOKEN = process.env.BACKEND_API_TOKEN; // Your actual token from .env.local
+    const body = await req.json();
+    const { newMessage, history, sessionId } = body;
 
-    if (!BACKEND_API_TOKEN) {
-      return new Response(JSON.stringify({ error: 'Backend API token not configured.' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    if (!newMessage || !sessionId) {
+      return NextResponse.json({ error: 'newMessage and sessionId are required' }, { status: 400 });
     }
 
-    const backendResponse = await fetch(BACKEND_COPILOT_ENDPOINT, {
+    const LLM_SERVICE_URL = process.env.LLM_SERVICE_URL || 'http://localhost:5001/chat';
+
+    const llmResponse = await fetch(LLM_SERVICE_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${BACKEND_API_TOKEN}`, // <--- Use your securely stored token here
-      },
-      body: JSON.stringify({ question }), // Forward the question to your backend
-      // IMPORTANT: Set agent or follow for Node.js if your backend uses self-signed certs or needs specific http agent
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: newMessage,
+        session_id: sessionId,
+        history: history || [],
+      }),
     });
 
-    // 3. Handle non-OK responses from your backend
-    if (!backendResponse.ok) {
-      const errorData = await backendResponse.json().catch(() => ({ message: 'Unknown error from backend' }));
-      return new Response(JSON.stringify({ 
-        error: `Backend error: ${backendResponse.status} - ${errorData.message || backendResponse.statusText}` 
-      }), {
-        status: backendResponse.status,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    if (!llmResponse.ok) {
+      const errorBody = await llmResponse.text();
+      console.error(`LLM service error: ${llmResponse.status}`, errorBody);
+      return NextResponse.json({ error: `LLM service failed: ${errorBody}` }, { status: llmResponse.status });
     }
 
-    // --- 4. Stream the backend's response directly to the frontend ---
-    // This is highly efficient, directly piping the stream.
-    return new Response(backendResponse.body, {
-      headers: {
-        // Match the Content-Type that your backend sends for the stream
-        'Content-Type': backendResponse.headers.get('Content-Type') || 'text/plain', 
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
-    });
+    const data = await llmResponse.json();
+    return NextResponse.json(data);
 
   } catch (error) {
-    console.error('Next.js API Route Error:', error);
-    return new Response(JSON.stringify({ 
-      error: `Internal server error in Copilot proxy: ${error instanceof Error ? error.message : String(error)}` 
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    console.error('Error in copilot API route:', error);
+    return NextResponse.json({ error: 'An internal server error occurred.' }, { status: 500 });
   }
 }
