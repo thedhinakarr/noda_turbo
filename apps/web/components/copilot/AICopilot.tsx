@@ -1,4 +1,4 @@
-// apps/web/components/copilot/AICopilot.tsx
+// FILE: apps/web/components/copilot/AICopilot.tsx
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -6,30 +6,8 @@ import { Bot, Send, Loader, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCopilotStore, Message } from '@/lib/store/copilotStore';
 
-// Helper to execute UI actions sent from the agent
-const executeUiActions = (actions: { action: string; selector: string }[]) => {
-  actions.forEach(action => {
-    try {
-      const element = document.querySelector(action.selector);
-      if (!element) {
-        console.warn(`UI Action Failed: Element with selector "${action.selector}" not found.`);
-        return;
-      }
-      if (action.action === 'highlight') {
-        element.classList.add('glowing-highlight'); // Assumes a CSS class for this effect
-        setTimeout(() => element.classList.remove('glowing-highlight'), 3500);
-      }
-      if (action.action === 'scroll_to_view') {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    } catch (e) {
-      console.error("Failed to execute UI action:", action, e);
-    }
-  });
-};
-
 export const AICopilot = () => {
-  const { sessionId, messages, addMessage } = useCopilotStore();
+  const { sessionId, messages, addMessage, setHighlightedSelectors } = useCopilotStore();
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -62,17 +40,35 @@ export const AICopilot = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        // Use the specific error from the API route if available
         throw new Error(errorData.error || `Server error: ${response.status}`);
       }
 
       const data = await response.json();
-
+      console.log('RECEIVED API RESPONSE:', data);
       addMessage({ role: 'assistant', content: data.text });
 
+      // --- UPDATED: Handle multiple UI actions ---
       if (data.ui_actions && data.ui_actions.length > 0) {
-        executeUiActions(data.ui_actions);
+        console.log(`Processing ${data.ui_actions.length} UI actions:`, data.ui_actions);
+        
+        // Collect all highlight selectors
+        const highlightSelectors: string[] = [];
+        
+        data.ui_actions.forEach((action: any, index: number) => {
+          if (action.action === 'highlight' && action.selector) {
+            highlightSelectors.push(action.selector);
+            console.log(`UI Action ${index + 1}: highlight ${action.selector}`);
+          }
+          // Future: handle other action types like 'scroll', 'animate', etc.
+        });
+        
+        // Apply all highlights at once
+        if (highlightSelectors.length > 0) {
+          setHighlightedSelectors(highlightSelectors);
+          console.log(`✅ Applied ${highlightSelectors.length} highlights simultaneously`);
+        }
       }
+      // --- END UPDATES ---
 
     } catch (error) {
       console.error('Error sending message:', error);
@@ -82,9 +78,7 @@ export const AICopilot = () => {
     }
   };
 
-  // Your existing JSX can remain largely the same, but we will simplify the message rendering logic
-  // as we no longer need placeholder IDs for streaming.
-
+  // Rest of component remains the same
   return (
     <div className="flex flex-col h-full bg-background-darker rounded-xl border border-border shadow-xl">
       <div className="flex-1 p-6 space-y-5 overflow-y-auto custom-scrollbar">

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
 import { RetrospectDataPoint } from '@/lib/graphql/types';
+import { sanitizeForId } from '@/lib/utils'; // Import our utility
 
 interface BuildingDetailTabsProps {
   buildingData: RetrospectDataPoint;
@@ -16,14 +17,12 @@ interface DetailData {
     unit?: string;
 }
 
-// This is a helper component, and it's fine for it to live in the same file
-// as long as it's used correctly by the main exported component.
-function DetailTabContent({ title, data, tabValue }: { title: string, data: DetailData[], tabValue: string }) {
+function DetailTabContent({ title, data, tabValue, buildingId }: { title: string, data: DetailData[], tabValue: string, buildingId: string }) {
     return (
         <TabsContent value={tabValue}>
             <div className="mt-6">
                 <div className="rounded-md border">
-                    <Table>
+                    <Table id={`details-table-${tabValue}-${buildingId}`}>
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Metric</TableHead>
@@ -32,9 +31,11 @@ function DetailTabContent({ title, data, tabValue }: { title: string, data: Deta
                         </TableHeader>
                         <TableBody>
                             {data.map(item => (
-                                <TableRow key={item.name}>
-                                    <TableCell className="font-medium">{item.name}</TableCell>
-                                    <TableCell className="text-right">
+                                <TableRow key={item.name} id={`details-row-${tabValue}-${sanitizeForId(item.name)}-${buildingId}`}>
+                                    <TableCell className="font-medium" id={`details-cell-name-${tabValue}-${sanitizeForId(item.name)}-${buildingId}`}>
+                                      {item.name}
+                                    </TableCell>
+                                    <TableCell className="text-right" id={`details-cell-value-${tabValue}-${sanitizeForId(item.name)}-${buildingId}`}>
                                         <Badge variant={ (item.value || 0) > 0.1 && title === "Faults" ? "destructive" : "outline"}>
                                             {(item.value || 0).toFixed(2)} {item.unit || ''}
                                         </Badge>
@@ -74,7 +75,7 @@ export function BuildingDetailTabs({ buildingData }: BuildingDetailTabsProps) {
       { name: 'Volume (Absolute)', value: buildingData.volume_abs, unit: 'm³' },
       { name: 'Overflow (Absolute)', value: buildingData.overflow_abs, unit: '' },
   ];
-  
+
   const substationData: DetailData[] = [
       { name: 'Efficiency', value: buildingData.efficiency, unit: '%' },
       { name: 'NTU', value: buildingData.ntu, unit: '' },
@@ -82,8 +83,10 @@ export function BuildingDetailTabs({ buildingData }: BuildingDetailTabsProps) {
       { name: 'Supply (Absolute)', value: buildingData.supply_abs, unit: '' },
   ];
 
+  const safeBuildingId = sanitizeForId(buildingData.id);
+
   return (
-    <Card>
+    <Card id={`building-details-card-${safeBuildingId}`}>
         <CardHeader>
             <CardTitle>{buildingData.building_control}</CardTitle>
             <CardDescription>
@@ -98,12 +101,11 @@ export function BuildingDetailTabs({ buildingData }: BuildingDetailTabsProps) {
                     <TabsTrigger value="demand">Demand & Flow</TabsTrigger>
                     <TabsTrigger value="substation">Substation</TabsTrigger>
                 </TabsList>
-                
-                {/* THE FIX IS HERE: The `value` prop in TabsContent now correctly matches the TabsTrigger */}
-                <DetailTabContent title="Faults" data={faultData} tabValue="faults" />
-                <DetailTabContent title="Temperatures" data={tempData} tabValue="temperatures" />
-                <DetailTabContent title="Demand & Flow" data={demandData} tabValue="demand" />
-                <DetailTabContent title="Substation" data={substationData} tabValue="substation" />
+
+                <DetailTabContent title="Faults" data={faultData} tabValue="faults" buildingId={safeBuildingId} />
+                <DetailTabContent title="Temperatures" data={tempData} tabValue="temperatures" buildingId={safeBuildingId} />
+                <DetailTabContent title="Demand & Flow" data={demandData} tabValue="demand" buildingId={safeBuildingId} />
+                <DetailTabContent title="Substation" data={substationData} tabValue="substation" buildingId={safeBuildingId} />
             </Tabs>
         </CardContent>
     </Card>

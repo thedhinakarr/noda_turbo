@@ -9,6 +9,7 @@ export interface Building {
   asset_longitude: number | null;
   created_at: string;
   updated_at: string;
+  efficiency?: number;
 }
 
 // Type for a single WeatherData point

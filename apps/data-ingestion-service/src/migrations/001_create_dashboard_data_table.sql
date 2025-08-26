@@ -3,6 +3,7 @@
 -- All metric/rank columns are NUMERIC for maximum flexibility.
 -- Relaxed NOT NULL constraints on non-universal columns.
 -- Contains ALL columns from retrospect_1_0_3_example.csv except for primary keys and foreign keys managed elsewhere.
+-- This table is designed to be the main data sourse for the overview page, important for performance and flexibility.
 
 CREATE TABLE IF NOT EXISTS dashboard_data (
     -- Surrogate Primary Key

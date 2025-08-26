@@ -4,7 +4,6 @@ uvicorn[standard]
 python-dotenv
 fastmcp
 
-# LlamaIndex packages with specified versions for modern agent support
-llama-index
-llama-index-core
-llama-index-llms-google-genai
+# LlamaIndex packages - simplified to let the main package handle its own dependencies
+llama-index>=0.10.34
+llama-index-llms-google-genai>=0.1.13

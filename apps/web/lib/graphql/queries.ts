@@ -11,6 +11,7 @@ export const GET_OVERVIEW_PAGE_DATA = gql`
         asset_active
         asset_latitude
         asset_longitude
+
       }
       weather {
         time_period

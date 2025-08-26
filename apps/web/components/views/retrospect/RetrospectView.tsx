@@ -1,12 +1,10 @@
 'use client';
-
 import * as React from 'react';
 import { useQuery } from '@apollo/client';
 import { DateRange } from 'react-day-picker';
 import { subDays, format } from 'date-fns';
 import { GET_RETROSPECT_DATA } from '@/lib/graphql/queries';
 import { RetrospectDataPoint } from '@/lib/graphql/types';
-
 import { DatePickerWithRange } from '@/components/ui/date-picker-with-range';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -14,14 +12,18 @@ import { AlertTriangle } from 'lucide-react';
 import { KPICards } from './KPICards';
 import { AnalysisSection } from './AnalysisSection';
 import { BuildingDetailTabs } from './BuildingDetailTabs';
+import { useHighlightEffect } from '@/lib/hooks/useHighlightEffect';
 
 export function RetrospectView() {
+  // Add the highlighting hook
+  useHighlightEffect();
+  
   const [selectedBuilding, setSelectedBuilding] = React.useState<RetrospectDataPoint | null>(null);
   const [date, setDate] = React.useState<DateRange | undefined>({
     from: subDays(new Date(), 90),
     to: new Date(),
   });
-
+  
   const { loading, error, data } = useQuery(GET_RETROSPECT_DATA, {
     variables: {
       dateFilter: {
@@ -31,9 +33,9 @@ export function RetrospectView() {
     },
     skip: !date?.from || !date?.to,
   });
-
+  
   const retrospectData: RetrospectDataPoint[] = data?.retrospectData || [];
-
+  
   const handleSelectBuilding = (building: RetrospectDataPoint | null) => {
     if (selectedBuilding && building && selectedBuilding.id === building.id) {
       setSelectedBuilding(null);
@@ -41,7 +43,7 @@ export function RetrospectView() {
       setSelectedBuilding(building);
     }
   };
-
+  
   if (error) {
     return (
         <Alert variant="destructive">
@@ -51,13 +53,12 @@ export function RetrospectView() {
         </Alert>
     );
   }
-
+  
   return (
     <div className="space-y-8">
       <div className="flex items-center space-x-4">
         <DatePickerWithRange date={date} setDate={setDate} />
       </div>
-
       {loading ? (
         <RetrospectSkeleton />
       ) : (

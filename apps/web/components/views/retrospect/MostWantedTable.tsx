@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { RetrospectDataPoint } from '@/lib/graphql/types';
+import { sanitizeForId } from '@/lib/utils'; // Import our utility
 
 interface MostWantedTableProps {
   data: RetrospectDataPoint[];
@@ -24,7 +25,7 @@ export function MostWantedTable({ data, onSelectBuilding, selectedBuildingId }: 
 
   return (
     <div className="rounded-md border">
-      <Table>
+      <Table id="retrospect-leaderboard-table">
         <TableHeader>
           <TableRow>
             <TableHead className="w-[80px]">Rank</TableHead>
@@ -35,18 +36,25 @@ export function MostWantedTable({ data, onSelectBuilding, selectedBuildingId }: 
         </TableHeader>
         <TableBody>
           {rankedData.map((item, index) => (
-            <TableRow 
+            <TableRow
               key={item.id}
+              id={`leaderboard-row-${sanitizeForId(item.id)}`}
               onClick={() => onSelectBuilding(item)}
               className={cn(
                 "cursor-pointer hover:bg-muted/50",
                 item.id === selectedBuildingId && "bg-muted"
               )}
             >
-              <TableCell className="font-medium">#{index + 1}</TableCell>
-              <TableCell>{item.building_control}</TableCell>
-              <TableCell className="text-right">{(item.efficiency || 0).toFixed(1)}%</TableCell>
-              <TableCell className="text-right">
+              <TableCell className="font-medium" id={`leaderboard-cell-rank-${sanitizeForId(item.id)}`}>
+                #{index + 1}
+              </TableCell>
+              <TableCell id={`leaderboard-cell-name-${sanitizeForId(item.id)}`}>
+                {item.building_control}
+              </TableCell>
+              <TableCell className="text-right" id={`leaderboard-cell-efficiency-${sanitizeForId(item.id)}`}>
+                {(item.efficiency || 0).toFixed(1)}%
+              </TableCell>
+              <TableCell className="text-right" id={`leaderboard-cell-fault-score-${sanitizeForId(item.id)}`}>
                 <Badge variant={getFaultScore(item) > 0.1 ? "destructive" : "outline"}>
                   {getFaultScore(item).toFixed(2)}
                 </Badge>

@@ -19,12 +19,12 @@ export function KPICards({ data }: KPICardsProps) {
 
     const totalEfficiency = uniqueData.reduce((sum, item) => sum + (item.efficiency || 0), 0);
     const totalOverflow = uniqueData.reduce((sum, item) => sum + (item.overflow_abs || 0), 0);
-    const criticalFaults = uniqueData.filter(item => 
-      (item.fault_heat_sys || 0) > 0.1 || 
+    const criticalFaults = uniqueData.filter(item =>
+      (item.fault_heat_sys || 0) > 0.1 ||
       (item.fault_valve || 0) > 0.1 ||
       (item.fault_transfer || 0) > 0.1
     ).length;
-    
+
     const qualityIssues = uniqueData.reduce((sum, item) => {
         return sum + (item.data_quality_missing_odt || 0) + (item.data_quality_outlier_odt || 0);
     }, 0);
@@ -39,8 +39,8 @@ export function KPICards({ data }: KPICardsProps) {
   }, [data]);
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
+    <div id="retrospect-kpi-group" className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <Card id="retrospect-kpi-avg-efficiency">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Average Efficiency</CardTitle>
           <Zap className="h-4 w-4 text-muted-foreground" />
@@ -49,7 +49,7 @@ export function KPICards({ data }: KPICardsProps) {
           <div className="text-2xl font-bold">{stats.avgEfficiency.toFixed(1)}%</div>
         </CardContent>
       </Card>
-      <Card>
+      <Card id="retrospect-kpi-total-overflow">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Overflow</CardTitle>
           <Droplets className="h-4 w-4 text-muted-foreground" />
@@ -58,7 +58,7 @@ export function KPICards({ data }: KPICardsProps) {
           <div className="text-2xl font-bold">{stats.totalOverflow.toLocaleString(undefined, {maximumFractionDigits: 0})}</div>
         </CardContent>
       </Card>
-      <Card>
+      <Card id="retrospect-kpi-buildings-with-faults">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Buildings with Faults</CardTitle>
           <AlertTriangle className={`h-4 w-4 ${stats.criticalFaults > 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
@@ -67,7 +67,7 @@ export function KPICards({ data }: KPICardsProps) {
           <div className={`text-2xl font-bold ${stats.criticalFaults > 0 ? 'text-red-500' : ''}`}>{stats.criticalFaults}</div>
         </CardContent>
       </Card>
-      <Card>
+      <Card id="retrospect-kpi-data-quality">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Data Quality</CardTitle>
           <ShieldCheck className="h-4 w-4 text-muted-foreground" />

@@ -70,3 +70,7 @@ yarn-error.log*
 #========================================================================
 coverage/
 .venv
+
+
+# Ignore generated PDF reports
+apps/llm-service/reports

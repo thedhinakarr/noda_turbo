@@ -1,5 +1,5 @@
-import {RetrospectView} from '@/components/views/retrospect/RetrospectView';
-// Update the import path to the correct location of PageHeader
+// FILE: apps/web/app/(dashboard)/retrospect/page.tsx
+import { RetrospectView } from '@/components/views/retrospect/RetrospectView';
 
 export default function RetrospectPage() {
   return (
